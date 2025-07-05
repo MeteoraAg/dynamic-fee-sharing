@@ -1,0 +1,50 @@
+use anchor_lang::prelude::*;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+
+use crate::constants::seeds::FEE_VAULT_AUTHORITY_PREFIX;
+use crate::state::FeeVault;
+use crate::utils::token::transfer_from_fee_vault;
+
+#[event_cpi]
+#[derive(Accounts)]
+pub struct ClaimFeeCtx<'info> {
+    #[account(mut, has_one = token_vault, has_one = token_mint)]
+    pub fee_vault: AccountLoader<'info, FeeVault>,
+
+    /// CHECK: pool authority
+    #[account(
+            seeds = [
+                FEE_VAULT_AUTHORITY_PREFIX.as_ref(),
+            ],
+            bump,
+        )]
+    pub fee_vault_authority: UncheckedAccount<'info>,
+
+    pub token_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    pub token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    pub user_token_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    pub user: Signer<'info>,
+
+    pub token_program: Interface<'info, TokenInterface>,
+}
+
+pub fn handle_claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {
+    let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
+    let fee_being_claimed = fee_vault.validate_and_claim_fee(index, &ctx.accounts.user.key())?;
+
+    transfer_from_fee_vault(
+        ctx.accounts.fee_vault_authority.to_account_info(),
+        &ctx.accounts.token_mint,
+        &ctx.accounts.token_vault,
+        &ctx.accounts.user_token_vault,
+        &ctx.accounts.token_program,
+        fee_being_claimed,
+        ctx.bumps.fee_vault_authority,
+    )?;
+
+    // TODO emit event
+    Ok(())
+}

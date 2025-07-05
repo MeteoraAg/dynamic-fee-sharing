@@ -1,0 +1,1 @@
+Simple program to config fee sharing

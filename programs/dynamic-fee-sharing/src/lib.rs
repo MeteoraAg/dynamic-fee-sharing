@@ -1,0 +1,32 @@
+#![allow(unexpected_cfgs)]
+
+use anchor_lang::prelude::*;
+#[macro_use]
+pub mod macros;
+pub mod constants;
+pub mod error;
+pub mod instructions;
+pub use instructions::*;
+pub mod math;
+pub mod state;
+pub mod utils;
+declare_id!("JBNaEHUvYvsD8HaJE5oRogtvnJefA4EGb95ke6KXK2H7");
+
+#[program]
+pub mod dynamic_fee_sharing {
+    use super::*;
+    pub fn initialize_fee_vault(
+        ctx: Context<InitializeFeeVaultCtx>,
+        params: InitializeFeeVaultParameters,
+    ) -> Result<()> {
+        instructions::handle_initialize_fee_vault(ctx, &params)
+    }
+
+    pub fn fund_fee(ctx: Context<FundFeeCtx>, max_amount: u64) -> Result<()> {
+        instructions::handle_fund_fee(ctx, max_amount)
+    }
+
+    pub fn claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {
+        instructions::handle_claim_fee(ctx, index)
+    }
+}

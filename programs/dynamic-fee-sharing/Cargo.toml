@@ -1,0 +1,25 @@
+[package]
+name = "dynamic-fee-sharing"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "dynamic_fee_sharing"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+
+[dependencies]
+anchor-lang = {version = "0.31.1", features = ["event-cpi"]}
+anchor-spl = "0.31.1"
+bytemuck = { version = "1.20.0", features = ["derive", "min_const_generics"] }
+num_enum = "0.7.0"
+ruint = "1.3.0"
