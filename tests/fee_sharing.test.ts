@@ -88,7 +88,7 @@ async function fullFlow(
   tokenMint: PublicKey,
   params: InitializeFeeVaultParameters
 ) {
-  
+
   const program = createProgram();
   const feeVault = Keypair.generate();
   const tokenVault = deriveTokenVaultAddress(feeVault.publicKey);
