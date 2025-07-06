@@ -37,7 +37,7 @@ describe("Fee vault sharing", () => {
     svm = new LiteSVM();
     svm.addProgramFromFile(
       new PublicKey(DynamicFeeSharingIDL.address),
-      "/Users/minhdo/.meteora/dynamic-fee-sharing/target/deploy/dynamic_fee_sharing.so"
+      "./target/deploy/dynamic_fee_sharing.so"
     );
 
     admin = Keypair.generate();
