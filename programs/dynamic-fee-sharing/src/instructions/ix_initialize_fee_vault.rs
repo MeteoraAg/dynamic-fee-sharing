@@ -80,8 +80,10 @@ pub struct InitializeFeeVaultCtx<'info> {
         mint::token_program = token_program,
     )]
     pub token_mint: Box<InterfaceAccount<'info, Mint>>,
+
     /// CHECK: owner
     pub owner: UncheckedAccount<'info>,
+
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -101,7 +103,7 @@ pub fn handle_initialize_fee_vault(
     );
 
     let mut fee_vault = ctx.accounts.fee_vault.load_init()?;
-    fee_vault.initalize(
+    fee_vault.initialize(
         &ctx.accounts.owner.key(),
         get_token_program_flags(&ctx.accounts.token_mint).into(),
         &ctx.accounts.token_mint.key(),
