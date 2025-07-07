@@ -7,6 +7,7 @@ pub mod constants;
 pub mod error;
 pub mod instructions;
 pub use instructions::*;
+pub mod event;
 pub mod math;
 pub mod state;
 pub mod utils;
@@ -20,6 +21,13 @@ pub mod dynamic_fee_sharing {
         params: InitializeFeeVaultParameters,
     ) -> Result<()> {
         instructions::handle_initialize_fee_vault(ctx, &params)
+    }
+
+    pub fn initialize_fee_vault_pda(
+        ctx: Context<InitializeFeeVaultPdaCtx>,
+        params: InitializeFeeVaultParameters,
+    ) -> Result<()> {
+        instructions::handle_initialize_fee_vault_pda(ctx, &params)
     }
 
     pub fn fund_fee(ctx: Context<FundFeeCtx>, max_amount: u64) -> Result<()> {
