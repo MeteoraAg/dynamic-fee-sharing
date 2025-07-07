@@ -6,12 +6,14 @@ import {
   deriveFeeVaultAuthorityAddress,
   deriveTokenVaultAddress,
   DynamicFeeSharingProgram,
+  expectThrowsErrorCode,
+  generateUsers,
   getFeeVault,
   getOrCreateAtA,
+  getProgramErrorCodeHexString,
   InitializeFeeVaultParameters,
   mintToken,
-  TOKEN_DECIMALS,
-  UserShare,
+  TOKEN_DECIMALS
 } from "./common";
 import { TOKEN_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import { BN } from "bn.js";
@@ -54,13 +56,84 @@ describe("Fee vault sharing", () => {
     mintToken(svm, admin, tokenMint, admin, funder.publicKey);
   });
 
-  it("Full flow", async () => {
-    const users: UserShare[] = [
-      {
-        address: user.publicKey,
+  it("Fail to create more than max user", async () => {
+    const generatedUser = generateUsers(svm, 6); // 6 users
+    const users = generatedUser.map((item) => {
+      return {
+        address: item.publicKey,
         share: new BN(1000),
-      },
-    ];
+      };
+    });
+
+    const params: InitializeFeeVaultParameters = {
+      padding: [],
+      users,
+    };
+
+    const feeVault = Keypair.generate();
+    const tokenVault = deriveTokenVaultAddress(feeVault.publicKey);
+    const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
+
+    const tx = await program.methods
+      .initializeFeeVault(params)
+      .accountsPartial({
+        feeVault: feeVault.publicKey,
+        feeVaultAuthority,
+        tokenVault,
+        tokenMint,
+        owner: vaultOwner.publicKey,
+        payer: admin.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .transaction();
+
+    tx.recentBlockhash = svm.latestBlockhash();
+    tx.sign(admin, feeVault);
+
+    const errorCode = getProgramErrorCodeHexString("ExceededUser");
+    expectThrowsErrorCode(svm.sendTransaction(tx), errorCode);
+  });
+
+  it("Fail to create with zero user", async () => {
+    const users = [];
+
+    const params: InitializeFeeVaultParameters = {
+      padding: [],
+      users,
+    };
+
+    const feeVault = Keypair.generate();
+    const tokenVault = deriveTokenVaultAddress(feeVault.publicKey);
+    const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
+
+    const tx = await program.methods
+      .initializeFeeVault(params)
+      .accountsPartial({
+        feeVault: feeVault.publicKey,
+        feeVaultAuthority,
+        tokenVault,
+        tokenMint,
+        owner: vaultOwner.publicKey,
+        payer: admin.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .transaction();
+
+    tx.recentBlockhash = svm.latestBlockhash();
+    tx.sign(admin, feeVault);
+
+    const errorCode = getProgramErrorCodeHexString("ExceededUser");
+    expectThrowsErrorCode(svm.sendTransaction(tx), errorCode);
+  });
+
+  it("Full flow", async () => {
+    const generatedUser = generateUsers(svm, 5); // 5 users
+    const users = generatedUser.map((item) => {
+      return {
+        address: item.publicKey,
+        share: new BN(1000),
+      };
+    });
 
     const params: InitializeFeeVaultParameters = {
       padding: [],
@@ -71,7 +144,7 @@ describe("Fee vault sharing", () => {
       svm,
       admin,
       funder,
-      user,
+      generatedUser,
       vaultOwner.publicKey,
       tokenMint,
       params
@@ -83,12 +156,11 @@ async function fullFlow(
   svm: LiteSVM,
   admin: Keypair,
   funder: Keypair,
-  user: Keypair,
+  users: Keypair[],
   vaultOwner: PublicKey,
   tokenMint: PublicKey,
   params: InitializeFeeVaultParameters
 ) {
-
   const program = createProgram();
   const feeVault = Keypair.generate();
   const tokenVault = deriveTokenVaultAddress(feeVault.publicKey);
@@ -168,35 +240,37 @@ async function fullFlow(
 
   console.log("User claim fee");
 
-  const userIndex = 0;
-  const userTokenVault = getOrCreateAtA(svm, user, tokenMint, user.publicKey);
-  const claimFeeTx = await program.methods
-    .claimFee(userIndex)
-    .accountsPartial({
-      feeVault: feeVault.publicKey,
-      tokenMint,
-      tokenVault,
-      userTokenVault,
-      user: user.publicKey,
-      tokenProgram: TOKEN_PROGRAM_ID,
-    })
-    .transaction();
+  for (let i = 0; i < users.length; i++) {
+    const user = users[i];
+    const userTokenVault = getOrCreateAtA(svm, user, tokenMint, user.publicKey);
+    const claimFeeTx = await program.methods
+      .claimFee(i)
+      .accountsPartial({
+        feeVault: feeVault.publicKey,
+        tokenMint,
+        tokenVault,
+        userTokenVault,
+        user: user.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .transaction();
 
-  claimFeeTx.recentBlockhash = svm.latestBlockhash();
-  claimFeeTx.sign(user);
+    claimFeeTx.recentBlockhash = svm.latestBlockhash();
+    claimFeeTx.sign(user);
 
-  const claimFeeRes = svm.sendTransaction(claimFeeTx);
+    const claimFeeRes = svm.sendTransaction(claimFeeTx);
 
-  if (claimFeeRes instanceof TransactionMetadata) {
-    const feeVaultState = getFeeVault(svm, feeVault.publicKey);
-    const account = svm.getAccount(userTokenVault);
-    const userTokenBalance = AccountLayout.decode(
-      account.data
-    ).amount.toString();
-    expect(userTokenBalance.toString()).eq(
-      feeVaultState.users[0].feeClaimed.toString()
-    );
-  } else {
-    console.log(claimFeeRes.meta().logs());
+    if (claimFeeRes instanceof TransactionMetadata) {
+      const feeVaultState = getFeeVault(svm, feeVault.publicKey);
+      const account = svm.getAccount(userTokenVault);
+      const userTokenBalance = AccountLayout.decode(
+        account.data
+      ).amount.toString();
+      expect(userTokenBalance.toString()).eq(
+        feeVaultState.users[i].feeClaimed.toString()
+      );
+    } else {
+      console.log(claimFeeRes.meta().logs());
+    }
   }
 }
