@@ -25,7 +25,7 @@ impl InitializeFeeVaultParameters {
     pub fn validate(&self) -> Result<()> {
         let number_of_user = self.users.len();
         require!(
-            number_of_user > 0 && number_of_user <= MAX_USER,
+            number_of_user >= 2 && number_of_user <= MAX_USER,
             FeeVaultError::ExceededUser
         );
         for i in 0..number_of_user {

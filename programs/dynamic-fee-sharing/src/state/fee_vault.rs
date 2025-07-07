@@ -1,11 +1,11 @@
-use anchor_lang::prelude::*;
-
 use crate::{
     constants::{MAX_USER, PRECISION_SCALE},
     error::FeeVaultError,
     instructions::UserShare,
     math::{mul_shr, shl_div, SafeMath},
 };
+use anchor_lang::prelude::*;
+use static_assertions::const_assert_eq;
 
 #[account(zero_copy)]
 #[derive(InitSpace, Debug, Default)]
@@ -13,7 +13,7 @@ pub struct FeeVault {
     pub owner: Pubkey,
     pub token_mint: Pubkey,
     pub token_vault: Pubkey,
-    pub token_flag: u8, // indlicate whether token is spl-token or token2022
+    pub token_flag: u8, // indicate whether token is spl-token or token2022
     pub padding_0: [u8; 15],
     pub total_share: u64,
     pub total_funded_fee: u64,
@@ -21,17 +21,18 @@ pub struct FeeVault {
     pub padding: [u128; 6],
     pub users: [UserFee; MAX_USER],
 }
+const_assert_eq!(FeeVault::INIT_SPACE, 640);
 
 #[zero_copy]
 #[derive(InitSpace, Debug, Default)]
 pub struct UserFee {
     pub address: Pubkey,
     pub share: u64,
-    pub fee_pending: u64, // not used for not
     pub fee_claimed: u64,
-    pub padding: [u8; 8],
+    pub padding: [u8; 16], // padding for future use
     pub fee_per_share_checkpoint: u128,
 }
+const_assert_eq!(UserFee::INIT_SPACE, 80);
 
 impl FeeVault {
     pub fn initialize(
