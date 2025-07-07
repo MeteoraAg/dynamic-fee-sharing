@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-dynamic_fee_sharing = "JBNaEHUvYvsD8HaJE5oRogtvnJefA4EGb95ke6KXK2H7"
+dynamic_fee_sharing = "dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh"
 
 [registry]
 url = "https://api.apr.dev"
