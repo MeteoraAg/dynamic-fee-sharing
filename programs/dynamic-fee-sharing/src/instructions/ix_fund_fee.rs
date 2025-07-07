@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::error::FeeVaultError;
+use crate::event::EvtFundFee;
 use crate::state::FeeVault;
 use crate::utils::token::{calculate_transfer_fee_excluded_amount, transfer_from_user};
 
@@ -43,6 +44,14 @@ pub fn handle_fund_fee(ctx: Context<FundFeeCtx>, max_amount: u64) -> Result<()> 
         &ctx.accounts.token_program,
         amount,
     )?;
+
+    emit_cpi!(EvtFundFee {
+        fee_vault: ctx.accounts.fee_vault.key(),
+        funder: ctx.accounts.funder.key(),
+        fee_per_share: fee_vault.fee_per_share,
+        excluded_transfer_fee_amount,
+        max_amount
+    });
 
     Ok(())
 }

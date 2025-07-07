@@ -4,6 +4,7 @@ import {
   createProgram,
   createToken,
   deriveFeeVaultAuthorityAddress,
+  deriveFeeVaultPdaAddress,
   deriveTokenVaultAddress,
   DynamicFeeSharingProgram,
   getFeeVault,
@@ -23,7 +24,7 @@ import { expect } from "chai";
 
 import DynamicFeeSharingIDL from "../target/idl/dynamic_fee_sharing.json";
 
-describe("Fee vault sharing", () => {
+describe("Fee vault pda sharing", () => {
   let program: DynamicFeeSharingProgram;
   let svm: LiteSVM;
   let admin: Keypair;
@@ -90,15 +91,18 @@ async function fullFlow(
 ) {
 
   const program = createProgram();
-  const feeVault = Keypair.generate();
-  const tokenVault = deriveTokenVaultAddress(feeVault.publicKey);
+  const baseKp = Keypair.generate();
+  const feeVault = deriveFeeVaultPdaAddress(baseKp.publicKey, tokenMint);
+  const tokenVault = deriveTokenVaultAddress(feeVault);
   const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
+
 
   console.log("initialize fee vault");
   const tx = await program.methods
-    .initializeFeeVault(params)
+    .initializeFeeVaultPda(params)
     .accountsPartial({
-      feeVault: feeVault.publicKey,
+      feeVault,
+      base: baseKp.publicKey,
       feeVaultAuthority,
       tokenVault,
       tokenMint,
@@ -109,12 +113,12 @@ async function fullFlow(
     .transaction();
 
   tx.recentBlockhash = svm.latestBlockhash();
-  tx.sign(admin, feeVault);
+  tx.sign(admin, baseKp);
 
   const sendRes = svm.sendTransaction(tx);
 
   if (sendRes instanceof TransactionMetadata) {
-    const feeVaultState = getFeeVault(svm, feeVault.publicKey);
+    const feeVaultState = getFeeVault(svm, feeVault);
     expect(feeVaultState.owner.toString()).eq(vaultOwner.toString());
     expect(feeVaultState.tokenMint.toString()).eq(tokenMint.toString());
     expect(feeVaultState.tokenVault.toString()).eq(tokenVault.toString());
@@ -140,7 +144,7 @@ async function fullFlow(
   const fundFeeTx = await program.methods
     .fundFee(fundAmount)
     .accountsPartial({
-      feeVault: feeVault.publicKey,
+      feeVault,
       tokenVault,
       tokenMint,
       fundTokenVault,
@@ -155,7 +159,7 @@ async function fullFlow(
   const fundFeeRes = svm.sendTransaction(fundFeeTx);
 
   if (fundFeeRes instanceof TransactionMetadata) {
-    const feeVaultState = getFeeVault(svm, feeVault.publicKey);
+    const feeVaultState = getFeeVault(svm, feeVault);
     const account = svm.getAccount(tokenVault);
     const tokenVaultBalance = AccountLayout.decode(
       account.data
@@ -173,7 +177,7 @@ async function fullFlow(
   const claimFeeTx = await program.methods
     .claimFee(userIndex)
     .accountsPartial({
-      feeVault: feeVault.publicKey,
+      feeVault,
       tokenMint,
       tokenVault,
       userTokenVault,
@@ -188,7 +192,7 @@ async function fullFlow(
   const claimFeeRes = svm.sendTransaction(claimFeeTx);
 
   if (claimFeeRes instanceof TransactionMetadata) {
-    const feeVaultState = getFeeVault(svm, feeVault.publicKey);
+    const feeVaultState = getFeeVault(svm, feeVault);
     const account = svm.getAccount(userTokenVault);
     const userTokenBalance = AccountLayout.decode(
       account.data

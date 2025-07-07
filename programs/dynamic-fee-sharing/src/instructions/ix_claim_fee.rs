@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::constants::seeds::FEE_VAULT_AUTHORITY_PREFIX;
+use crate::event::EvtClaimFee;
 use crate::state::FeeVault;
 use crate::utils::token::transfer_from_fee_vault;
 
@@ -47,6 +48,12 @@ pub fn handle_claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {
         ctx.bumps.fee_vault_authority,
     )?;
 
-    // TODO emit event
+    emit_cpi!(EvtClaimFee {
+        fee_vault: ctx.accounts.fee_vault.key(),
+        index,
+        user: ctx.accounts.user.key(),
+        claimed_fee: fee_being_claimed,
+    });
+
     Ok(())
 }

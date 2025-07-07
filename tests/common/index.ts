@@ -52,10 +52,10 @@ export function createProgram(): DynamicFeeSharingProgram {
   return program;
 }
 
-export function getFeeVault(svm: LiteSVM, feeVault: PublicKey): FeeVault{
-    const program = createProgram()
-    const account = svm.getAccount(feeVault)
-    return program.coder.accounts.decode("feeVault", Buffer.from(account.data))
+export function getFeeVault(svm: LiteSVM, feeVault: PublicKey): FeeVault {
+  const program = createProgram()
+  const account = svm.getAccount(feeVault)
+  return program.coder.accounts.decode("feeVault", Buffer.from(account.data))
 }
 
 export function deriveFeeVaultAuthorityAddress(): PublicKey {
@@ -70,6 +70,15 @@ export function deriveTokenVaultAddress(feeVault: PublicKey): PublicKey {
   const program = createProgram();
   return PublicKey.findProgramAddressSync(
     [Buffer.from("token_vault"), feeVault.toBuffer()],
+    program.programId
+  )[0];
+}
+
+
+export function deriveFeeVaultPdaAddress(base: PublicKey, tokenMint: PublicKey): PublicKey {
+  const program = createProgram();
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("fee_vault"), base.toBuffer(), tokenMint.toBuffer()],
     program.programId
   )[0];
 }
