@@ -47,6 +47,7 @@ pub fn handle_fund_fee(ctx: Context<FundFeeCtx>, max_amount: u64) -> Result<()> 
 
     emit_cpi!(EvtFundFee {
         fee_vault: ctx.accounts.fee_vault.key(),
+        funder: ctx.accounts.funder.key(),
         fee_per_share: fee_vault.fee_per_share,
         excluded_transfer_fee_amount,
         max_amount

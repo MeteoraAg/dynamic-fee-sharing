@@ -14,6 +14,7 @@ pub struct EvtInitializeFeeVault {
 #[event]
 pub struct EvtFundFee {
     pub fee_vault: Pubkey,
+    pub funder: Pubkey,
     pub excluded_transfer_fee_amount: u64,
     pub max_amount: u64,
     pub fee_per_share: u128,
