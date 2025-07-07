@@ -22,4 +22,7 @@ pub enum FeeVaultError {
 
     #[msg("Invalid user address")]
     InvalidUserAddress,
+
+    #[msg("Exceeded maximum number of users allowed")]
+    ExceedMaxUser,
 }

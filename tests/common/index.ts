@@ -6,7 +6,11 @@ import {
   Program,
   Wallet,
 } from "@coral-xyz/anchor";
-import { LiteSVM } from "litesvm";
+import {
+  FailedTransactionMetadata,
+  LiteSVM,
+  TransactionMetadata,
+} from "litesvm";
 
 import DynamicFeeSharingIDL from "../../target/idl/dynamic_fee_sharing.json";
 import { DynamicFeeSharing } from "../../target/types/dynamic_fee_sharing";
@@ -22,10 +26,15 @@ import {
   clusterApiUrl,
   Connection,
   Keypair,
+  LAMPORTS_PER_SOL,
   PublicKey,
   SystemProgram,
   Transaction,
 } from "@solana/web3.js";
+import {
+  TransactionErrorFieldless,
+  TransactionErrorInstructionError,
+} from "litesvm/dist/internal";
 
 export type InitializeFeeVaultParameters =
   IdlTypes<DynamicFeeSharing>["initializeFeeVaultParameters"];
@@ -53,9 +62,9 @@ export function createProgram(): DynamicFeeSharingProgram {
 }
 
 export function getFeeVault(svm: LiteSVM, feeVault: PublicKey): FeeVault {
-  const program = createProgram()
-  const account = svm.getAccount(feeVault)
-  return program.coder.accounts.decode("feeVault", Buffer.from(account.data))
+  const program = createProgram();
+  const account = svm.getAccount(feeVault);
+  return program.coder.accounts.decode("feeVault", Buffer.from(account.data));
 }
 
 export function deriveFeeVaultAuthorityAddress(): PublicKey {
@@ -74,8 +83,10 @@ export function deriveTokenVaultAddress(feeVault: PublicKey): PublicKey {
   )[0];
 }
 
-
-export function deriveFeeVaultPdaAddress(base: PublicKey, tokenMint: PublicKey): PublicKey {
+export function deriveFeeVaultPdaAddress(
+  base: PublicKey,
+  tokenMint: PublicKey
+): PublicKey {
   const program = createProgram();
   return PublicKey.findProgramAddressSync(
     [Buffer.from("fee_vault"), base.toBuffer(), tokenMint.toBuffer()],
@@ -169,4 +180,50 @@ export function getOrCreateAtA(
   }
 
   return ataKey;
+}
+
+export function generateUsers(svm: LiteSVM, numberOfUsers: number) {
+  const res = [];
+  for (let i = 0; i < numberOfUsers; i++) {
+    const user = Keypair.generate();
+    svm.airdrop(user.publicKey, BigInt(LAMPORTS_PER_SOL));
+    res.push(user);
+  }
+
+  return res;
+}
+
+export function getProgramErrorCodeHexString(errorMessage: String) {
+  const error = DynamicFeeSharingIDL.errors.find(
+    (e) =>
+      e.name.toLowerCase() === errorMessage.toLowerCase() ||
+      e.msg.toLowerCase() === errorMessage.toLowerCase()
+  );
+
+  if (!error) {
+    throw new Error(
+      `Unknown Dynamic Fee Sharing error message / name: ${errorMessage}`
+    );
+  }
+
+  return error.code;
+}
+
+export function expectThrowsErrorCode(
+  response: TransactionMetadata | FailedTransactionMetadata,
+  errorCode: number
+) {
+  if (response instanceof FailedTransactionMetadata) {
+    const message = response.err().toString();
+
+    if (!message.toString().includes(errorCode.toString())) {
+      throw new Error(
+        `Unexpected error: ${message}. Expected error: ${errorCode}`
+      );
+    }
+
+    return;
+  } else {
+    throw new Error("Expected an error but didn't get one");
+  }
 }

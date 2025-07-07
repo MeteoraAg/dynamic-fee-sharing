@@ -26,7 +26,7 @@ impl InitializeFeeVaultParameters {
         let number_of_user = self.users.len();
         require!(
             number_of_user > 0 && number_of_user <= MAX_USER,
-            FeeVaultError::InvalidFeeVaultParameters
+            FeeVaultError::ExceedMaxUser
         );
         for i in 0..number_of_user {
             require!(
@@ -35,7 +35,7 @@ impl InitializeFeeVaultParameters {
             );
             require!(
                 self.users[i].address.ne(&Pubkey::default()),
-                FeeVaultError::InvalidFeeVaultParameters
+                FeeVaultError::InvalidUserAddress
             );
         }
         // that is fine to leave user addresses are duplicated?
