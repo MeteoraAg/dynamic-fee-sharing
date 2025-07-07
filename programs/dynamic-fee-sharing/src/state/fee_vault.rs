@@ -34,7 +34,7 @@ pub struct UserFee {
 }
 
 impl FeeVault {
-    pub fn initialize(
+    pub fn initalize(
         &mut self,
         owner: &Pubkey,
         token_flag: u8,
@@ -77,9 +77,9 @@ impl FeeVault {
             .ok_or_else(|| FeeVaultError::InvalidUserIndex)?;
         require!(user.address.eq(signer), FeeVaultError::InvalidUserAddress);
 
-        let reward_per_share_delta = self.fee_per_share.safe_sub(user.fee_per_share_checkpoint)?;
+        let rewad_per_share_delta = self.fee_per_share.safe_sub(user.fee_per_share_checkpoint)?;
 
-        let fee_being_claimed = mul_shr(user.share.into(), reward_per_share_delta, PRECISION_SCALE)
+        let fee_being_claimed = mul_shr(user.share.into(), rewad_per_share_delta, PRECISION_SCALE)
             .ok_or_else(|| FeeVaultError::MathOverflow)?
             .try_into()
             .map_err(|_| FeeVaultError::MathOverflow)?;

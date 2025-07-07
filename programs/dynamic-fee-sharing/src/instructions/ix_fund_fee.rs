@@ -11,12 +11,10 @@ pub struct FundFeeCtx<'info> {
     #[account(mut, has_one = token_vault, has_one = token_mint)]
     pub fee_vault: AccountLoader<'info, FeeVault>,
 
-    #[account(mut)]
     pub token_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     pub token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    #[account(mut)]
     pub fund_token_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     pub funder: Signer<'info>,

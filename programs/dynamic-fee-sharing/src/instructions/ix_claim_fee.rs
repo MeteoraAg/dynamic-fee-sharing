@@ -20,12 +20,10 @@ pub struct ClaimFeeCtx<'info> {
         )]
     pub fee_vault_authority: UncheckedAccount<'info>,
 
-    #[account(mut)]
     pub token_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     pub token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    #[account(mut)]
     pub user_token_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     pub user: Signer<'info>,
