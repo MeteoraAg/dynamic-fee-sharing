@@ -11,7 +11,7 @@ pub mod event;
 pub mod math;
 pub mod state;
 pub mod utils;
-declare_id!("JBNaEHUvYvsD8HaJE5oRogtvnJefA4EGb95ke6KXK2H7");
+declare_id!("dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh");
 
 #[program]
 pub mod dynamic_fee_sharing {
