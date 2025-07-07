@@ -26,7 +26,7 @@ impl InitializeFeeVaultParameters {
         let number_of_user = self.users.len();
         require!(
             number_of_user > 0 && number_of_user <= MAX_USER,
-            FeeVaultError::ExceedMaxUser
+            FeeVaultError::ExceededUser
         );
         for i in 0..number_of_user {
             require!(

@@ -90,7 +90,7 @@ describe("Fee vault sharing", () => {
     tx.recentBlockhash = svm.latestBlockhash();
     tx.sign(admin, feeVault);
 
-    const errorCode = getProgramErrorCodeHexString("ExceedMaxUser");
+    const errorCode = getProgramErrorCodeHexString("ExceededUser");
     expectThrowsErrorCode(svm.sendTransaction(tx), errorCode);
   });
 
@@ -122,7 +122,7 @@ describe("Fee vault sharing", () => {
     tx.recentBlockhash = svm.latestBlockhash();
     tx.sign(admin, feeVault);
 
-    const errorCode = getProgramErrorCodeHexString("ExceedMaxUser");
+    const errorCode = getProgramErrorCodeHexString("ExceededUser");
     expectThrowsErrorCode(svm.sendTransaction(tx), errorCode);
   });
 

@@ -93,7 +93,7 @@ describe("Fee vault pda sharing", () => {
     tx.recentBlockhash = svm.latestBlockhash();
     tx.sign(admin, baseKp);
 
-    const errorCode = getProgramErrorCodeHexString("ExceedMaxUser");
+    const errorCode = getProgramErrorCodeHexString("ExceededUser");
     expectThrowsErrorCode(svm.sendTransaction(tx), errorCode);
   });
 
@@ -126,7 +126,7 @@ describe("Fee vault pda sharing", () => {
     tx.recentBlockhash = svm.latestBlockhash();
     tx.sign(admin, baseKp);
 
-    const errorCode = getProgramErrorCodeHexString("ExceedMaxUser");
+    const errorCode = getProgramErrorCodeHexString("ExceededUser");
     expectThrowsErrorCode(svm.sendTransaction(tx), errorCode);
   });
 
