@@ -18,7 +18,7 @@ pub struct InitializeFeeVaultParameters {
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, Copy)]
 pub struct UserShare {
     pub address: Pubkey,
-    pub share: u64,
+    pub share: u32,
 }
 
 impl InitializeFeeVaultParameters {

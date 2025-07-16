@@ -61,7 +61,7 @@ describe("Fee vault sharing", () => {
     const users = generatedUser.map((item) => {
       return {
         address: item.publicKey,
-        share: new BN(1000),
+        share: 1000,
       };
     });
 
@@ -131,7 +131,7 @@ describe("Fee vault sharing", () => {
     const users = generatedUser.map((item) => {
       return {
         address: item.publicKey,
-        share: new BN(1000),
+        share: 1000,
       };
     });
 
@@ -190,8 +190,8 @@ async function fullFlow(
     expect(feeVaultState.owner.toString()).eq(vaultOwner.toString());
     expect(feeVaultState.tokenMint.toString()).eq(tokenMint.toString());
     expect(feeVaultState.tokenVault.toString()).eq(tokenVault.toString());
-    const totalShare = params.users.reduce((a, b) => a.add(b.share), new BN(0));
-    expect(feeVaultState.totalShare.toNumber()).eq(totalShare.toNumber());
+    const totalShare = params.users.reduce((a, b) => a.add(new BN(b.share)), new BN(0));
+    expect(feeVaultState.totalShare).eq(totalShare.toNumber());
     expect(feeVaultState.totalFundedFee.toNumber()).eq(0);
 
     const totalUsers = feeVaultState.users.filter(

@@ -15,7 +15,8 @@ pub struct FeeVault {
     pub token_vault: Pubkey,
     pub token_flag: u8, // indicate whether token is spl-token or token2022
     pub padding_0: [u8; 15],
-    pub total_share: u64,
+    pub total_share: u32,
+    pub padding_1: [u8; 4],
     pub total_funded_fee: u64,
     pub fee_per_share: u128,
     pub padding: [u128; 6],
@@ -27,7 +28,8 @@ const_assert_eq!(FeeVault::INIT_SPACE, 640);
 #[derive(InitSpace, Debug, Default)]
 pub struct UserFee {
     pub address: Pubkey,
-    pub share: u64,
+    pub share: u32,
+    pub padding_0: [u8; 4],
     pub fee_claimed: u64,
     pub padding: [u8; 16], // padding for future use
     pub fee_per_share_checkpoint: u128,
@@ -63,7 +65,7 @@ impl FeeVault {
     pub fn fund_fee(&mut self, amount: u64) -> Result<()> {
         self.total_funded_fee = self.total_funded_fee.safe_add(amount)?;
 
-        let fee_per_share = shl_div(amount, self.total_share, PRECISION_SCALE)
+        let fee_per_share = shl_div(amount, self.total_share.into(), PRECISION_SCALE)
             .ok_or_else(|| FeeVaultError::MathOverflow)?;
 
         self.fee_per_share = self.fee_per_share.safe_add(fee_per_share)?;

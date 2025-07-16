@@ -11,6 +11,8 @@ pub mod event;
 pub mod math;
 pub mod state;
 pub mod utils;
+
+pub mod tests;
 declare_id!("dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh");
 
 #[program]
