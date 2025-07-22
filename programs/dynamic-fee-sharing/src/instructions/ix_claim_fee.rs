@@ -38,22 +38,24 @@ pub fn handle_claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {
     let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
     let fee_being_claimed = fee_vault.validate_and_claim_fee(index, &ctx.accounts.user.key())?;
 
-    transfer_from_fee_vault(
-        ctx.accounts.fee_vault_authority.to_account_info(),
-        &ctx.accounts.token_mint,
-        &ctx.accounts.token_vault,
-        &ctx.accounts.user_token_vault,
-        &ctx.accounts.token_program,
-        fee_being_claimed,
-        ctx.bumps.fee_vault_authority,
-    )?;
+    if fee_being_claimed > 0 {
+        transfer_from_fee_vault(
+            ctx.accounts.fee_vault_authority.to_account_info(),
+            &ctx.accounts.token_mint,
+            &ctx.accounts.token_vault,
+            &ctx.accounts.user_token_vault,
+            &ctx.accounts.token_program,
+            fee_being_claimed,
+            ctx.bumps.fee_vault_authority,
+        )?;
 
-    emit_cpi!(EvtClaimFee {
-        fee_vault: ctx.accounts.fee_vault.key(),
-        index,
-        user: ctx.accounts.user.key(),
-        claimed_fee: fee_being_claimed,
-    });
+        emit_cpi!(EvtClaimFee {
+            fee_vault: ctx.accounts.fee_vault.key(),
+            index,
+            user: ctx.accounts.user.key(),
+            claimed_fee: fee_being_claimed,
+        });
+    }
 
     Ok(())
 }
