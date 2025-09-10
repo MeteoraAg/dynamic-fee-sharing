@@ -36,6 +36,26 @@ pub mod dynamic_fee_sharing {
         instructions::handle_fund_fee(ctx, max_amount)
     }
 
+    pub fn claim_dammv2_fee(ctx: Context<ClaimDammv2FeeCtx>) -> Result<()> {
+        instructions::handle_claim_dammv2_fee(ctx)
+    }
+
+    pub fn claim_dbc_trading_fee(ctx: Context<ClaimDbcTradingFeeCtx>) -> Result<()> {
+        instructions::handle_claim_dbc_trading_fee(ctx)
+    }
+
+    pub fn claim_dbc_creator_trading_fee(ctx: Context<ClaimDbcCreatorTradingFeeCtx>) -> Result<()> {
+        instructions::handle_claim_dbc_creator_trading_fee(ctx)
+    }
+
+    pub fn withdraw_dbc_creator_surplus(ctx: Context<WithdrawDbcCreatorSurplusCtx>) -> Result<()> {
+        instructions::handle_withdraw_dbc_creator_surplus(ctx)
+    }
+
+    pub fn withdraw_dbc_partner_surplus(ctx: Context<WithdrawDbcPartnerSurplusCtx>) -> Result<()> {
+        instructions::handle_withdraw_dbc_partner_surplus(ctx)
+    }
+
     pub fn claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {
         instructions::handle_claim_fee(ctx, index)
     }

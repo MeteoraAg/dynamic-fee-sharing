@@ -783,6 +783,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "damm-v2"
+version = "0.1.3"
+dependencies = [
+ "anchor-lang",
+ "bytemuck",
+]
+
+[[package]]
 name = "derivation-path"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -820,12 +828,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "dynamic-bonding-curve"
+version = "0.1.6"
+dependencies = [
+ "anchor-lang",
+ "bytemuck",
+]
+
+[[package]]
 name = "dynamic-fee-sharing"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
  "bytemuck",
+ "damm-v2",
+ "dynamic-bonding-curve",
  "num_enum",
  "proptest",
  "ruint",

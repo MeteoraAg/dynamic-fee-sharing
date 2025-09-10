@@ -21,6 +21,23 @@ pub struct EvtFundFee {
 }
 
 #[event]
+pub struct EvtClaimDammV2Fee {
+    pub fee_vault: Pubkey,
+    pub position: Pubkey,
+    pub pool: Pubkey,
+    pub claimed_amount: u64,
+    pub fee_per_share: u128,
+}
+
+#[event]
+pub struct EvtClaimDbcTradingFee {
+    pub fee_vault: Pubkey,
+    pub pool: Pubkey,
+    pub claimed_amount: u64,
+    pub fee_per_share: u128,
+}
+
+#[event]
 pub struct EvtClaimFee {
     pub fee_vault: Pubkey,
     pub user: Pubkey,
