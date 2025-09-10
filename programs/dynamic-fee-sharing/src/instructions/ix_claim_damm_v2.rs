@@ -19,6 +19,10 @@ pub struct ClaimDammv2FeeCtx<'info> {
     #[account(mut)]
     pub position: UncheckedAccount<'info>,
 
+    /// CHECK:
+    /// The token account for nft
+    pub position_nft_account: UncheckedAccount<'info>,
+
     /// The user token a account
     /// This account use to satisfy accounts context. The pool only has fee in token b account
     #[account(mut)]
@@ -45,10 +49,6 @@ pub struct ClaimDammv2FeeCtx<'info> {
     /// CHECK:
     /// The mint of token b
     pub token_b_mint: UncheckedAccount<'info>,
-
-    /// CHECK:
-    /// The token account for nft
-    pub position_nft_account: UncheckedAccount<'info>,
 
     /// CHECK: Token a program
     pub token_a_program: UncheckedAccount<'info>,

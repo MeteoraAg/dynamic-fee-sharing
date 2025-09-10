@@ -31,10 +31,6 @@ import {
   SystemProgram,
   Transaction,
 } from "@solana/web3.js";
-import {
-  TransactionErrorFieldless,
-  TransactionErrorInstructionError,
-} from "litesvm/dist/internal";
 
 export type InitializeFeeVaultParameters =
   IdlTypes<DynamicFeeSharing>["initializeFeeVaultParameters"];
@@ -46,6 +42,9 @@ export type DynamicFeeSharingProgram = Program<DynamicFeeSharing>;
 
 export const TOKEN_DECIMALS = 9;
 export const RAW_AMOUNT = 1_000_000_000 * 10 ** TOKEN_DECIMALS;
+export const DYNAMIC_FEE_SHARING_PROGRAM_ID = new PublicKey(
+  DynamicFeeSharingIDL.address
+);
 
 export function createProgram(): DynamicFeeSharingProgram {
   const wallet = new Wallet(Keypair.generate());
