@@ -15,6 +15,7 @@ pub struct WithdrawDbcCreatorSurplusCtx<'info> {
     pub config: UncheckedAccount<'info>,
 
     /// CHECK: The virtual pool
+    #[account(mut)]
     pub pool: UncheckedAccount<'info>,
 
     /// The treasury token b account

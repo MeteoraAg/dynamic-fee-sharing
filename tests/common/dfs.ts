@@ -4,11 +4,13 @@ import {
   deriveFeeVaultAuthorityAddress,
   deriveFeeVaultPdaAddress,
   deriveTokenVaultAddress,
+  getOrCreateAtA,
   InitializeFeeVaultParameters,
 } from ".";
 import { LiteSVM, TransactionMetadata } from "litesvm";
 import {
   getAssociatedTokenAddressSync,
+  TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { expect } from "chai";
@@ -20,6 +22,13 @@ import {
   getProgramFromFlagDammV2,
 } from "./damm_v2";
 import { sendTransactionOrExpectThrowError } from "./svm";
+import {
+  DBC_PROGRAM_ID,
+  deriveDbcEventAuthority,
+  deriveDbcPoolAuthority,
+  getVirtualConfigState,
+  getVirtualPoolState,
+} from "./dbc";
 
 export async function createFeeVaultPda(
   svm: LiteSVM,
@@ -103,4 +112,170 @@ export async function claimDammV2Fee(
   tx.sign(owner);
 
   sendTransactionOrExpectThrowError(svm, tx, false);
+}
+
+export async function claimDbcCreatorTradingFee(
+  svm: LiteSVM,
+  creator: Keypair,
+  feeVault: PublicKey,
+  tokenVault: PublicKey,
+  poolConfig: PublicKey,
+  virtualPool: PublicKey
+) {
+  const program = createProgram();
+  const virtualPoolState = getVirtualPoolState(svm, virtualPool);
+  const poolConfigState = getVirtualConfigState(svm, poolConfig);
+
+  const tokenAAccount = getOrCreateAtA(
+    svm,
+    creator,
+    virtualPoolState.baseMint,
+    creator.publicKey,
+    TOKEN_2022_PROGRAM_ID
+  );
+
+  const tx = await program.methods
+    .claimDbcCreatorTradingFee()
+    .accountsPartial({
+      feeVault,
+      creator: creator.publicKey,
+      config: poolConfig,
+      pool: virtualPool,
+      tokenAAccount,
+      tokenBAccount: tokenVault,
+      baseVault: virtualPoolState.baseVault,
+      quoteVault: virtualPoolState.quoteVault,
+      baseMint: virtualPoolState.baseMint,
+      quoteMint: poolConfigState.quoteMint,
+      tokenBaseProgram: TOKEN_2022_PROGRAM_ID,
+      tokenQuoteProgram: TOKEN_PROGRAM_ID,
+      dbcEventAuthority: deriveDbcEventAuthority(),
+      dbcPoolAuthority: deriveDbcPoolAuthority(),
+      dbcProgram: DBC_PROGRAM_ID,
+    })
+    .transaction();
+
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(creator);
+
+  sendTransactionOrExpectThrowError(svm, tx, false);
+}
+
+export async function claimDbcTradingFee(
+  svm: LiteSVM,
+  feeClaimer: Keypair,
+  feeVault: PublicKey,
+  tokenVault: PublicKey,
+  poolConfig: PublicKey,
+  virtualPool: PublicKey
+) {
+  const program = createProgram();
+  const virtualPoolState = getVirtualPoolState(svm, virtualPool);
+  const poolConfigState = getVirtualConfigState(svm, poolConfig);
+
+  const tokenAAccount = getOrCreateAtA(
+    svm,
+    feeClaimer,
+    virtualPoolState.baseMint,
+    feeClaimer.publicKey,
+    TOKEN_2022_PROGRAM_ID
+  );
+
+  const tx = await program.methods
+    .claimDbcTradingFee()
+    .accountsPartial({
+      feeVault,
+      feeClaimer: feeClaimer.publicKey,
+      config: poolConfig,
+      pool: virtualPool,
+      tokenAAccount,
+      tokenBAccount: tokenVault,
+      baseVault: virtualPoolState.baseVault,
+      quoteVault: virtualPoolState.quoteVault,
+      baseMint: virtualPoolState.baseMint,
+      quoteMint: poolConfigState.quoteMint,
+      tokenBaseProgram: TOKEN_2022_PROGRAM_ID,
+      tokenQuoteProgram: TOKEN_PROGRAM_ID,
+      dbcEventAuthority: deriveDbcEventAuthority(),
+      dbcPoolAuthority: deriveDbcPoolAuthority(),
+      dbcProgram: DBC_PROGRAM_ID,
+    })
+    .transaction();
+
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(feeClaimer);
+
+  sendTransactionOrExpectThrowError(svm, tx);
+}
+
+export async function withdrawDbcCreatorSurplus(
+  svm: LiteSVM,
+  creator: Keypair,
+  feeVault: PublicKey,
+  tokenVault: PublicKey,
+  poolConfig: PublicKey,
+  virtualPool: PublicKey
+) {
+  const program = createProgram();
+  const virtualPoolState = getVirtualPoolState(svm, virtualPool);
+  const poolConfigState = getVirtualConfigState(svm, poolConfig);
+
+  const tx = await program.methods
+    .withdrawDbcCreatorSurplus()
+    .accountsPartial({
+      feeVault,
+      creator: creator.publicKey,
+      config: poolConfig,
+      pool: virtualPool,
+      tokenQuoteAccount: tokenVault,
+      quoteVault: virtualPoolState.quoteVault,
+      quoteMint: poolConfigState.quoteMint,
+      tokenBaseProgram: TOKEN_2022_PROGRAM_ID,
+      tokenQuoteProgram: TOKEN_PROGRAM_ID,
+      dbcEventAuthority: deriveDbcEventAuthority(),
+      dbcPoolAuthority: deriveDbcPoolAuthority(),
+      dbcProgram: DBC_PROGRAM_ID,
+    })
+    .transaction();
+
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(creator);
+
+  sendTransactionOrExpectThrowError(svm, tx);
+}
+
+export async function withdrawDbcPartnerSurplus(
+  svm: LiteSVM,
+  feeClaimer: Keypair,
+  feeVault: PublicKey,
+  tokenVault: PublicKey,
+  poolConfig: PublicKey,
+  virtualPool: PublicKey
+) {
+  const program = createProgram();
+  const virtualPoolState = getVirtualPoolState(svm, virtualPool);
+  const poolConfigState = getVirtualConfigState(svm, poolConfig);
+
+  const tx = await program.methods
+    .withdrawDbcPartnerSurplus()
+    .accountsPartial({
+      feeVault,
+      feeClaimer: feeClaimer.publicKey,
+      config: poolConfig,
+      pool: virtualPool,
+      tokenQuoteAccount: tokenVault,
+      quoteVault: virtualPoolState.quoteVault,
+      quoteMint: poolConfigState.quoteMint,
+      tokenBaseProgram: TOKEN_2022_PROGRAM_ID,
+      tokenQuoteProgram: TOKEN_PROGRAM_ID,
+      dbcEventAuthority: deriveDbcEventAuthority(),
+      dbcPoolAuthority: deriveDbcPoolAuthority(),
+      dbcProgram: DBC_PROGRAM_ID,
+    })
+    .transaction();
+
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(feeClaimer);
+
+  sendTransactionOrExpectThrowError(svm, tx);
 }

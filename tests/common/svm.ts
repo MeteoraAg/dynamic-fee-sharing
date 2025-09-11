@@ -17,6 +17,7 @@ import { expect } from "chai";
 import BN from "bn.js";
 import { DAMM_V2_PROGRAM_ID } from "./damm_v2";
 import { AccountLayout } from "@solana/spl-token";
+import { DBC_PROGRAM_ID } from "./dbc";
 
 export function startSvm() {
   const svm = new LiteSVM();
@@ -28,6 +29,11 @@ export function startSvm() {
   svm.addProgramFromFile(
     new PublicKey(DAMM_V2_PROGRAM_ID),
     "./tests/fixtures/damm_v2.so"
+  );
+
+  svm.addProgramFromFile(
+    new PublicKey(DBC_PROGRAM_ID),
+    "./tests/fixtures/dynamic_bonding_curve.so"
   );
 
   const accountInfo: AccountInfoBytes = {

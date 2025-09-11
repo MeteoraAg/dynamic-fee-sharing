@@ -96,6 +96,6 @@ describe("Claim damm v2 fee", () => {
     expect(postTotalFundedFee.sub(preTotalFundedFee).toString()).eq(
       postTokenVaultBalance.sub(preTokenVaultBalance).toString()
     );
-    expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0)
+    expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
   });
 });

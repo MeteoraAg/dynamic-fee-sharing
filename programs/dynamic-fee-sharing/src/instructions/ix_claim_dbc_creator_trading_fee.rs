@@ -16,14 +16,14 @@ pub struct ClaimDbcCreatorTradingFeeCtx<'info> {
     pub config: AccountLoader<'info, PoolConfig>,
 
     /// CHECK: The virtual pool
+    #[account(mut)]
     pub pool: UncheckedAccount<'info>,
 
-    /// The treasury token a account
     /// This account use to satisfy accounts context. The pool only has fee in token b account
     #[account(mut)]
     pub token_a_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    /// The treasury token b account
+    /// The token b account
     #[account(mut)]
     pub token_b_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
@@ -82,7 +82,7 @@ pub fn handle_claim_dbc_creator_trading_fee(
                 pool_authority: ctx.accounts.dbc_pool_authority.to_account_info(),
                 pool: ctx.accounts.pool.to_account_info(),
                 token_a_account: ctx.accounts.token_a_account.to_account_info(),
-                token_b_account: ctx.accounts.token_a_account.to_account_info(),
+                token_b_account: ctx.accounts.token_b_account.to_account_info(),
                 base_vault: ctx.accounts.base_vault.to_account_info(),
                 quote_vault: ctx.accounts.quote_vault.to_account_info(),
                 base_mint: ctx.accounts.base_mint.to_account_info(),

@@ -16,6 +16,7 @@ pub struct ClaimDbcTradingFeeCtx<'info> {
     pub config: AccountLoader<'info, PoolConfig>,
 
     /// CHECK: bdc virtual pool
+    #[account(mut)]
     pub pool: UncheckedAccount<'info>,
 
     /// The treasury token a account
@@ -81,7 +82,7 @@ pub fn handle_claim_dbc_trading_fee(ctx: Context<ClaimDbcTradingFeeCtx>) -> Resu
                 config: ctx.accounts.config.to_account_info(),
                 pool: ctx.accounts.pool.to_account_info(),
                 token_a_account: ctx.accounts.token_a_account.to_account_info(),
-                token_b_account: ctx.accounts.token_a_account.to_account_info(),
+                token_b_account: ctx.accounts.token_b_account.to_account_info(),
                 base_vault: ctx.accounts.base_vault.to_account_info(),
                 quote_vault: ctx.accounts.quote_vault.to_account_info(),
                 base_mint: ctx.accounts.base_mint.to_account_info(),

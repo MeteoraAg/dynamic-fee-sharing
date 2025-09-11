@@ -22,8 +22,8 @@ export const DAMM_V2_PROGRAM_ID = new PublicKey(CpAmmIDL.address);
 export type Pool = IdlAccounts<CpAmm>["pool"];
 export type Position = IdlAccounts<CpAmm>["position"];
 
-const MIN_SQRT_PRICE = new BN("4295048016");
-const MAX_SQRT_PRICE = new BN("79226673521066979257578248091");
+export const MIN_SQRT_PRICE = new BN("4295048016");
+export const MAX_SQRT_PRICE = new BN("79226673521066979257578248091");
 const LIQUIDITY_DELTA = new BN("1844674407800459963300003758876517305");
 const INIT_PRICE = new BN("18446744073709551616");
 
@@ -188,7 +188,7 @@ export function deriveDammV2PoolAuthority(): PublicKey {
   )[0];
 }
 
-function getSecondKey(key1: PublicKey, key2: PublicKey) {
+export function getSecondKey(key1: PublicKey, key2: PublicKey) {
   const buf1 = key1.toBuffer();
   const buf2 = key2.toBuffer();
   // Buf1 > buf2
@@ -198,7 +198,7 @@ function getSecondKey(key1: PublicKey, key2: PublicKey) {
   return buf1;
 }
 
-function getFirstKey(key1: PublicKey, key2: PublicKey) {
+export function getFirstKey(key1: PublicKey, key2: PublicKey) {
   const buf1 = key1.toBuffer();
   const buf2 = key2.toBuffer();
   // Buf1 > buf2
