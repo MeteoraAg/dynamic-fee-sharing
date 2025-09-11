@@ -3,7 +3,6 @@ use anchor_spl::token_interface::TokenAccount;
 use dynamic_bonding_curve::accounts::PoolConfig;
 
 use crate::{
-    const_pda,
     error::FeeVaultError,
     event::EvtFundFee,
     math::SafeMath,
@@ -13,12 +12,6 @@ use crate::{
 #[event_cpi]
 #[derive(Accounts)]
 pub struct FundingByClaimDbcCreatorTradingFeeCtx<'info> {
-    /// CHECK: fee vault authority
-    #[account(
-        address = const_pda::fee_vault_authority::ID
-    )]
-    pub fee_vault_authority: UncheckedAccount<'info>,
-
     #[account(mut)]
     pub fee_vault: AccountLoader<'info, FeeVault>,
 
@@ -71,7 +64,7 @@ pub fn handle_funding_by_claim_dbc_creator_trading_fee(
     ctx: Context<FundingByClaimDbcCreatorTradingFeeCtx>,
 ) -> Result<()> {
     let config = ctx.accounts.config.load()?;
-    let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
+    let fee_vault = ctx.accounts.fee_vault.load()?;
     // support collect fee mode is 0 (only quote token)
     require!(config.collect_fee_mode == 0, FeeVaultError::InvalidDbcPool);
 
@@ -83,8 +76,18 @@ pub fn handle_funding_by_claim_dbc_creator_trading_fee(
         FeeVaultError::InvalidFeeVault
     );
 
+    // support fee vault type is pda account
+    require!(
+        fee_vault.fee_vault_type == 0,
+        FeeVaultError::InvalidFeeVault
+    );
+
     let before_token_vault_balance = ctx.accounts.token_b_account.amount;
-    let signer_seeds = fee_vault_authority_seeds!();
+    let signer_seeds = fee_vault_seeds!(
+        fee_vault.base,
+        fee_vault.token_mint,
+        fee_vault.fee_vault_bump
+    );
     dynamic_bonding_curve::cpi::claim_creator_trading_fee(
         CpiContext::new_with_signer(
             ctx.accounts.dbc_program.to_account_info(),
@@ -97,7 +100,7 @@ pub fn handle_funding_by_claim_dbc_creator_trading_fee(
                 quote_vault: ctx.accounts.quote_vault.to_account_info(),
                 base_mint: ctx.accounts.base_mint.to_account_info(),
                 quote_mint: ctx.accounts.quote_mint.to_account_info(),
-                creator: ctx.accounts.fee_vault_authority.to_account_info(),
+                creator: ctx.accounts.fee_vault.to_account_info(),
                 token_base_program: ctx.accounts.token_base_program.to_account_info(),
                 token_quote_program: ctx.accounts.token_quote_program.to_account_info(),
                 event_authority: ctx.accounts.dbc_event_authority.to_account_info(),
@@ -114,15 +117,20 @@ pub fn handle_funding_by_claim_dbc_creator_trading_fee(
 
     let claimed_amount = after_token_vault_balance.safe_sub(before_token_vault_balance)?;
 
-    fee_vault.fund_fee(claimed_amount)?;
+    drop(fee_vault);
 
-    emit_cpi!(EvtFundFee {
-        funding_type: FundingType::ClaimDbcTradingFee,
-        fee_vault: ctx.accounts.fee_vault.key(),
-        funder: ctx.accounts.pool.key(),
-        funded_amount: claimed_amount,
-        fee_per_share: fee_vault.fee_per_share,
-    });
+    if claimed_amount > 0 {
+        let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
+        fee_vault.fund_fee(claimed_amount)?;
+
+        emit_cpi!(EvtFundFee {
+            funding_type: FundingType::ClaimDbcTradingFee,
+            fee_vault: ctx.accounts.fee_vault.key(),
+            funder: ctx.accounts.pool.key(),
+            funded_amount: claimed_amount,
+            fee_per_share: fee_vault.fee_per_share,
+        });
+    }
 
     Ok(())
 }

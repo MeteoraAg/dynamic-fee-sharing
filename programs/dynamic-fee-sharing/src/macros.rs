@@ -6,3 +6,14 @@ macro_rules! fee_vault_authority_seeds {
         ]
     };
 }
+
+macro_rules! fee_vault_seeds {
+    ($base:expr, $token_mint:expr, $bump:expr) => {
+        &[
+            crate::constants::seeds::FEE_VAULT_PREFIX,
+            $base.as_ref(),
+            $token_mint.as_ref(),
+            &[$bump],
+        ]
+    };
+}

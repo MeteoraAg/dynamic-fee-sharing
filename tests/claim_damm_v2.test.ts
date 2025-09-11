@@ -52,20 +52,6 @@ describe("Claim damm v2 fee", () => {
     dammV2Pool = createDmmV2PoolRes.pool;
     position = createDmmV2PoolRes.position;
     positionNftAccount = createDmmV2PoolRes.positionNftAccount;
-
-    const setAuthorityIx = createSetAuthorityInstruction(
-      positionNftAccount,
-      creator.publicKey,
-      AuthorityType.AccountOwner,
-      deriveFeeVaultAuthorityAddress(),
-      [],
-      TOKEN_2022_PROGRAM_ID
-    );
-    const assignOwnerTx = new Transaction().add(setAuthorityIx);
-    assignOwnerTx.recentBlockhash = svm.latestBlockhash();
-    assignOwnerTx.sign(creator);
-
-    sendTransactionOrExpectThrowError(svm, assignOwnerTx);
   });
 
   it("fullflow claim damm v2", async () => {
@@ -88,6 +74,20 @@ describe("Claim damm v2 fee", () => {
         ],
       }
     );
+
+    const setAuthorityIx = createSetAuthorityInstruction(
+      positionNftAccount,
+      creator.publicKey,
+      AuthorityType.AccountOwner,
+      feeVault,
+      [],
+      TOKEN_2022_PROGRAM_ID
+    );
+    const assignOwnerTx = new Transaction().add(setAuthorityIx);
+    assignOwnerTx.recentBlockhash = svm.latestBlockhash();
+    assignOwnerTx.sign(creator);
+
+    sendTransactionOrExpectThrowError(svm, assignOwnerTx);
 
     let vaultState = getFeeVault(svm, feeVault);
 

@@ -31,73 +31,20 @@ import {
 describe("Claim fee and withdraw dbc surplus", () => {
   let svm: LiteSVM;
   let admin: Keypair;
-  let feeClaimer: Keypair;
+  let payer: Keypair;
   let user: Keypair;
   let poolCreator: Keypair;
-  let virtualPool: PublicKey;
   let vaultOwner: Keypair;
   let quoteMint: PublicKey;
-  let virtualPoolConfig: PublicKey;
 
   beforeEach(async () => {
     svm = startSvm();
     admin = Keypair.generate();
-    feeClaimer = Keypair.generate();
+    payer = Keypair.generate();
     user = Keypair.generate();
     poolCreator = Keypair.generate();
-    [admin, feeClaimer, user, poolCreator, vaultOwner] = generateUsers(svm, 5);
+    [admin, payer, user, poolCreator, vaultOwner] = generateUsers(svm, 5);
     quoteMint = createToken(svm, admin, admin.publicKey, null);
-    let instructionParams = buildDefaultCurve();
-    const params: CreateConfigParams = {
-      payer: feeClaimer,
-      leftoverReceiver: deriveFeeVaultAuthorityAddress(),
-      feeClaimer: deriveFeeVaultAuthorityAddress(),
-      quoteMint,
-      instructionParams,
-    };
-    mintToken(
-      svm,
-      admin,
-      quoteMint,
-      admin,
-      user.publicKey,
-      instructionParams.migrationQuoteThreshold.mul(new BN(2)).toNumber()
-    );
-
-    virtualPoolConfig = await createConfig(svm, params);
-
-    virtualPool = await createVirtualPool(svm, {
-      payer: poolCreator,
-      poolCreator: poolCreator,
-      quoteMint,
-      config: virtualPoolConfig,
-      instructionParams: {
-        name: "test token spl",
-        symbol: "TEST",
-        uri: "abc.com",
-      },
-    });
-
-    // transfer pool creator
-    await transferCreator(svm, virtualPool, poolCreator, deriveFeeVaultAuthorityAddress())
-
-    let virtualPoolState = getVirtualPoolState(svm, virtualPool);
-    let configState = getVirtualConfigState(svm, virtualPoolConfig);
-    const amountIn = configState.migrationQuoteThreshold
-      .mul(new BN(6))
-      .div(new BN(5));
-    // swap
-    const swapParams: SwapParams = {
-      config: virtualPoolConfig,
-      payer: user,
-      pool: virtualPool,
-      inputTokenMint: quoteMint,
-      outputTokenMint: virtualPoolState.baseMint,
-      amountIn,
-      minimumAmountOut: new BN(0),
-      referralTokenAccount: null,
-    };
-    await swap(svm, swapParams);
   });
 
   it("claim dbc creator trading fee", async () => {
@@ -119,6 +66,16 @@ describe("Claim fee and withdraw dbc surplus", () => {
           },
         ],
       }
+    );
+
+    const { virtualPool, virtualPoolConfig } = await setupPool(
+      svm,
+      admin,
+      user,
+      poolCreator,
+      payer,
+      feeVault,
+      quoteMint
     );
 
     let vaultState = getFeeVault(svm, feeVault);
@@ -170,6 +127,16 @@ describe("Claim fee and withdraw dbc surplus", () => {
       }
     );
 
+    const { virtualPool, virtualPoolConfig } = await setupPool(
+      svm,
+      admin,
+      user,
+      poolCreator,
+      payer,
+      feeVault,
+      quoteMint
+    );
+
     let vaultState = getFeeVault(svm, feeVault);
 
     const preTotalFundedFee = vaultState.totalFundedFee;
@@ -179,7 +146,7 @@ describe("Claim fee and withdraw dbc surplus", () => {
 
     await claimDbcTradingFee(
       svm,
-      feeClaimer,
+      payer,
       feeVault,
       tokenVault,
       virtualPoolConfig,
@@ -217,6 +184,16 @@ describe("Claim fee and withdraw dbc surplus", () => {
           },
         ],
       }
+    );
+
+    const { virtualPool, virtualPoolConfig } = await setupPool(
+      svm,
+      admin,
+      user,
+      poolCreator,
+      payer,
+      feeVault,
+      quoteMint
     );
 
     let vaultState = getFeeVault(svm, feeVault);
@@ -268,6 +245,16 @@ describe("Claim fee and withdraw dbc surplus", () => {
       }
     );
 
+    const { virtualPool, virtualPoolConfig } = await setupPool(
+      svm,
+      admin,
+      user,
+      poolCreator,
+      payer,
+      feeVault,
+      quoteMint
+    );
+
     let vaultState = getFeeVault(svm, feeVault);
 
     const preTotalFundedFee = vaultState.totalFundedFee;
@@ -277,7 +264,7 @@ describe("Claim fee and withdraw dbc surplus", () => {
 
     await withdrawDbcPartnerSurplus(
       svm,
-      feeClaimer,
+      payer,
       feeVault,
       tokenVault,
       virtualPoolConfig,
@@ -296,3 +283,67 @@ describe("Claim fee and withdraw dbc surplus", () => {
     expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
   });
 });
+
+async function setupPool(
+  svm: LiteSVM,
+  admin: Keypair,
+  user: Keypair,
+  poolCreator: Keypair,
+  payer: Keypair,
+  feeVault: PublicKey,
+  quoteMint: PublicKey
+) {
+  let instructionParams = buildDefaultCurve();
+  const params: CreateConfigParams = {
+    payer,
+    leftoverReceiver: feeVault,
+    feeClaimer: feeVault,
+    quoteMint,
+    instructionParams,
+  };
+  mintToken(
+    svm,
+    admin,
+    quoteMint,
+    admin,
+    user.publicKey,
+    instructionParams.migrationQuoteThreshold.mul(new BN(2)).toNumber()
+  );
+
+  const virtualPoolConfig = await createConfig(svm, params);
+
+  const virtualPool = await createVirtualPool(svm, {
+    payer: poolCreator,
+    poolCreator: poolCreator,
+    quoteMint,
+    config: virtualPoolConfig,
+    instructionParams: {
+      name: "test token spl",
+      symbol: "TEST",
+      uri: "abc.com",
+    },
+  });
+
+  // transfer pool creator
+    await transferCreator(svm, virtualPool, poolCreator, feeVault);
+
+  let virtualPoolState = getVirtualPoolState(svm, virtualPool);
+  let configState = getVirtualConfigState(svm, virtualPoolConfig);
+  const amountIn = configState.migrationQuoteThreshold
+    .mul(new BN(6))
+    .div(new BN(5));
+  // swap
+  const swapParams: SwapParams = {
+    config: virtualPoolConfig,
+    payer: user,
+    pool: virtualPool,
+    inputTokenMint: quoteMint,
+    outputTokenMint: virtualPoolState.baseMint,
+    amountIn,
+    minimumAmountOut: new BN(0),
+    referralTokenAccount: null,
+  };
+  await swap(svm, swapParams);
+
+  return { virtualPool, virtualPoolConfig };
+}

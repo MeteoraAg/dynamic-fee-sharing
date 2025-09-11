@@ -88,7 +88,6 @@ export async function claimDammV2Fee(
   const tx = await program.methods
     .fundingByClaimDammv2Fee()
     .accountsPartial({
-      feeVaultAuthority: deriveFeeVaultAuthorityAddress(),
       feeVault,
       pool: dammv2Pool,
       position,
@@ -110,7 +109,7 @@ export async function claimDammV2Fee(
   tx.recentBlockhash = svm.latestBlockhash();
   tx.sign(owner);
 
-  sendTransactionOrExpectThrowError(svm, tx, false);
+  sendTransactionOrExpectThrowError(svm, tx, true);
 }
 
 export async function claimDbcCreatorTradingFee(
@@ -137,7 +136,6 @@ export async function claimDbcCreatorTradingFee(
     .fundingByClaimDbcCreatorTradingFee()
     .accountsPartial({
       feeVault,
-      feeVaultAuthority: deriveFeeVaultAuthorityAddress(),
       config: poolConfig,
       pool: virtualPool,
       tokenAAccount,
@@ -184,7 +182,6 @@ export async function claimDbcTradingFee(
     .fundingByClaimDbcTradingFee()
     .accountsPartial({
       feeVault,
-      feeVaultAuthority: deriveFeeVaultAuthorityAddress(),
       config: poolConfig,
       pool: virtualPool,
       tokenAAccount,
@@ -223,7 +220,6 @@ export async function withdrawDbcCreatorSurplus(
     .fundingByClaimDbcCreatorSurplus()
     .accountsPartial({
       feeVault,
-      feeVaultAuthority: deriveFeeVaultAuthorityAddress(),
       config: poolConfig,
       pool: virtualPool,
       tokenQuoteAccount: tokenVault,
@@ -240,7 +236,7 @@ export async function withdrawDbcCreatorSurplus(
   tx.recentBlockhash = svm.latestBlockhash();
   tx.sign(creator);
 
-  sendTransactionOrExpectThrowError(svm, tx);
+  sendTransactionOrExpectThrowError(svm, tx, true);
 }
 
 export async function withdrawDbcPartnerSurplus(
@@ -259,7 +255,6 @@ export async function withdrawDbcPartnerSurplus(
     .fundingByClaimDbcPartnerSurplus()
     .accountsPartial({
       feeVault,
-      feeVaultAuthority: deriveFeeVaultAuthorityAddress(),
       config: poolConfig,
       pool: virtualPool,
       tokenQuoteAccount: tokenVault,

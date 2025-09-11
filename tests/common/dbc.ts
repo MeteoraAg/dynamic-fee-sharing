@@ -279,7 +279,7 @@ export async function transferCreator(
   transaction.recentBlockhash = svm.latestBlockhash();
   transaction.sign(creator);
 
-  sendTransactionOrExpectThrowError(svm, transaction);
+  sendTransactionOrExpectThrowError(svm, transaction, true);
 }
 
 export function getVirtualPoolState(

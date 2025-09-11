@@ -3,7 +3,6 @@ use anchor_spl::token_interface::TokenAccount;
 use damm_v2::accounts::Pool;
 
 use crate::{
-    const_pda,
     error::FeeVaultError,
     event::EvtFundFee,
     math::SafeMath,
@@ -13,12 +12,6 @@ use crate::{
 #[event_cpi]
 #[derive(Accounts)]
 pub struct FundingByClaimDammv2FeeCtx<'info> {
-    /// CHECK: fee vault authority
-    #[account(
-        address = const_pda::fee_vault_authority::ID
-    )]
-    pub fee_vault_authority: UncheckedAccount<'info>,
-
     #[account(mut)]
     pub fee_vault: AccountLoader<'info, FeeVault>,
 
@@ -80,7 +73,7 @@ pub fn handle_funding_by_claim_dammv2_fee(ctx: Context<FundingByClaimDammv2FeeCt
     // support collect fee mode is 1 (only token B)
     require!(pool.collect_fee_mode == 1, FeeVaultError::InvalidDammv2Pool);
 
-    let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
+    let fee_vault = ctx.accounts.fee_vault.load()?;
 
     require!(
         fee_vault
@@ -90,9 +83,19 @@ pub fn handle_funding_by_claim_dammv2_fee(ctx: Context<FundingByClaimDammv2FeeCt
         FeeVaultError::InvalidFeeVault
     );
 
+    // support fee vault type is pda account
+    require!(
+        fee_vault.fee_vault_type == 0,
+        FeeVaultError::InvalidFeeVault
+    );
+
     let before_token_vault_balance = ctx.accounts.token_b_account.amount;
 
-    let signer_seeds = fee_vault_authority_seeds!();
+    let signer_seeds = fee_vault_seeds!(
+        fee_vault.base,
+        fee_vault.token_mint,
+        fee_vault.fee_vault_bump
+    );
 
     damm_v2::cpi::claim_position_fee(CpiContext::new_with_signer(
         ctx.accounts.dammv2_program.to_account_info(),
@@ -109,7 +112,7 @@ pub fn handle_funding_by_claim_dammv2_fee(ctx: Context<FundingByClaimDammv2FeeCt
             token_a_mint: ctx.accounts.token_a_mint.to_account_info(),
             token_b_mint: ctx.accounts.token_b_mint.to_account_info(),
             position_nft_account: ctx.accounts.position_nft_account.to_account_info(),
-            owner: ctx.accounts.fee_vault_authority.to_account_info(),
+            owner: ctx.accounts.fee_vault.to_account_info(),
             event_authority: ctx.accounts.dammv2_event_authority.to_account_info(),
             program: ctx.accounts.dammv2_program.to_account_info(),
         },
@@ -122,15 +125,20 @@ pub fn handle_funding_by_claim_dammv2_fee(ctx: Context<FundingByClaimDammv2FeeCt
 
     let claimed_amount = after_token_vault_balance.safe_sub(before_token_vault_balance)?;
 
-    fee_vault.fund_fee(claimed_amount)?;
+    drop(fee_vault);
 
-    emit_cpi!(EvtFundFee {
-        funding_type: FundingType::ClaimDammV2,
-        fee_vault: ctx.accounts.fee_vault.key(),
-        funder: ctx.accounts.pool.key(),
-        funded_amount: claimed_amount,
-        fee_per_share: fee_vault.fee_per_share,
-    });
+    if claimed_amount > 0 {
+        let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
+        fee_vault.fund_fee(claimed_amount)?;
+
+        emit_cpi!(EvtFundFee {
+            funding_type: FundingType::ClaimDammV2,
+            fee_vault: ctx.accounts.fee_vault.key(),
+            funder: ctx.accounts.pool.key(),
+            funded_amount: claimed_amount,
+            fee_per_share: fee_vault.fee_per_share,
+        });
+    }
 
     Ok(())
 }

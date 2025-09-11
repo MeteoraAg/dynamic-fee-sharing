@@ -9,14 +9,14 @@ use crate::utils::token::transfer_from_fee_vault;
 #[event_cpi]
 #[derive(Accounts)]
 pub struct ClaimFeeCtx<'info> {
+    #[account(mut, has_one = token_vault, has_one = token_mint)]
+    pub fee_vault: AccountLoader<'info, FeeVault>,
+
     /// CHECK: fee vault authority
     #[account(
         address = const_pda::fee_vault_authority::ID
     )]
     pub fee_vault_authority: UncheckedAccount<'info>,
-
-    #[account(mut, has_one = token_vault, has_one = token_mint)]
-    pub fee_vault: AccountLoader<'info, FeeVault>,
 
     #[account(mut)]
     pub token_vault: Box<InterfaceAccount<'info, TokenAccount>>,
