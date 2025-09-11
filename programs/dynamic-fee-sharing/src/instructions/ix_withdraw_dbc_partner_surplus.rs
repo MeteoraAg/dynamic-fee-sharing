@@ -1,7 +1,9 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
 
-use crate::{error::FeeVaultError, math::SafeMath, state::FeeVault};
+use crate::{
+    error::FeeVaultError, event::EvtDbcPartnerWithdrawSurplus, math::SafeMath, state::FeeVault,
+};
 
 #[event_cpi]
 #[derive(Accounts)]
@@ -18,7 +20,7 @@ pub struct WithdrawDbcPartnerSurplusCtx<'info> {
     #[account(mut)]
     pub pool: UncheckedAccount<'info>,
 
-    /// The treasury token b account
+    /// The token b account
     #[account(mut)]
     pub token_quote_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
@@ -41,7 +43,7 @@ pub struct WithdrawDbcPartnerSurplusCtx<'info> {
     /// CHECK: dbc program
     #[account(address = dynamic_bonding_curve::ID)]
     pub dbc_program: UncheckedAccount<'info>,
-    /// CHECK: dammv2 authority
+    /// CHECK: dbc event authority
     pub dbc_event_authority: UncheckedAccount<'info>,
 }
 
@@ -79,11 +81,16 @@ pub fn handle_withdraw_dbc_partner_surplus(
 
     let after_token_vault_balance = ctx.accounts.token_quote_account.amount;
 
-    let claimed_amount = after_token_vault_balance.safe_sub(before_token_vault_balance)?;
+    let withdrawal_amount = after_token_vault_balance.safe_sub(before_token_vault_balance)?;
 
-    fee_vault.fund_fee(claimed_amount)?;
+    fee_vault.fund_fee(withdrawal_amount)?;
 
-    // TODO emit event
+    emit_cpi!(EvtDbcPartnerWithdrawSurplus {
+        fee_vault: ctx.accounts.fee_vault.key(),
+        pool: ctx.accounts.pool.key(),
+        fee_per_share: fee_vault.fee_per_share,
+        withdrawal_amount,
+    });
 
     Ok(())
 }

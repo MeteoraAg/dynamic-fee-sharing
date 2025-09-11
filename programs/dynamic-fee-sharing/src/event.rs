@@ -38,6 +38,30 @@ pub struct EvtClaimDbcTradingFee {
 }
 
 #[event]
+pub struct EvtClaimDbcCreatorTradingFee {
+    pub fee_vault: Pubkey,
+    pub pool: Pubkey,
+    pub claimed_amount: u64,
+    pub fee_per_share: u128,
+}
+
+#[event]
+pub struct EvtDbcCreatorWithdrawSurplus {
+    pub fee_vault: Pubkey,
+    pub pool: Pubkey,
+    pub withdrawal_amount: u64,
+    pub fee_per_share: u128,
+}
+
+#[event]
+pub struct EvtDbcPartnerWithdrawSurplus {
+    pub fee_vault: Pubkey,
+    pub pool: Pubkey,
+    pub withdrawal_amount: u64,
+    pub fee_per_share: u128,
+}
+
+#[event]
 pub struct EvtClaimFee {
     pub fee_vault: Pubkey,
     pub user: Pubkey,

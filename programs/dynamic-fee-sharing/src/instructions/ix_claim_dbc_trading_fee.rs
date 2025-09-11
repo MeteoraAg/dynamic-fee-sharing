@@ -19,7 +19,6 @@ pub struct ClaimDbcTradingFeeCtx<'info> {
     #[account(mut)]
     pub pool: UncheckedAccount<'info>,
 
-    /// The treasury token a account
     /// This account use to satisfy accounts context. The pool only has fee in token b account
     #[account(mut)]
     pub token_a_account: Box<InterfaceAccount<'info, TokenAccount>>,
@@ -54,7 +53,7 @@ pub struct ClaimDbcTradingFeeCtx<'info> {
     /// CHECK: dbc program
     #[account(address = dynamic_bonding_curve::ID)]
     pub dbc_program: UncheckedAccount<'info>,
-    /// CHECK: dammv2 authority
+    /// CHECK: dbc authority
     pub dbc_event_authority: UncheckedAccount<'info>,
 }
 

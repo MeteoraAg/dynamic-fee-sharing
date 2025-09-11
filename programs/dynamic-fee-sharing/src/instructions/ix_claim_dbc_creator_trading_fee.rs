@@ -2,7 +2,9 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
 use dynamic_bonding_curve::accounts::PoolConfig;
 
-use crate::{error::FeeVaultError, event::EvtClaimDbcTradingFee, math::SafeMath, state::FeeVault};
+use crate::{
+    error::FeeVaultError, event::EvtClaimDbcCreatorTradingFee, math::SafeMath, state::FeeVault,
+};
 
 #[event_cpi]
 #[derive(Accounts)]
@@ -53,7 +55,7 @@ pub struct ClaimDbcCreatorTradingFeeCtx<'info> {
     /// CHECK: dbc program
     #[account(address = dynamic_bonding_curve::ID)]
     pub dbc_program: UncheckedAccount<'info>,
-    /// CHECK: dammv2 authority
+    /// CHECK: dbc event authority
     pub dbc_event_authority: UncheckedAccount<'info>,
 }
 
@@ -105,7 +107,7 @@ pub fn handle_claim_dbc_creator_trading_fee(
 
     fee_vault.fund_fee(claimed_amount)?;
 
-    emit_cpi!(EvtClaimDbcTradingFee {
+    emit_cpi!(EvtClaimDbcCreatorTradingFee {
         fee_vault: ctx.accounts.fee_vault.key(),
         pool: ctx.accounts.pool.key(),
         fee_per_share: fee_vault.fee_per_share,
