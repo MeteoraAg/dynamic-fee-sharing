@@ -3,21 +3,29 @@ use anchor_spl::token_interface::TokenAccount;
 use dynamic_bonding_curve::accounts::PoolConfig;
 
 use crate::{
-    error::FeeVaultError, event::EvtClaimDbcCreatorTradingFee, math::SafeMath, state::FeeVault,
+    const_pda,
+    error::FeeVaultError,
+    event::EvtFundFee,
+    math::SafeMath,
+    state::{FeeVault, FundingType},
 };
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct ClaimDbcCreatorTradingFeeCtx<'info> {
+pub struct FundingByClaimDbcTradingFeeCtx<'info> {
+    /// CHECK: fee vault authority
+    #[account(
+        address = const_pda::fee_vault_authority::ID
+    )]
+    pub fee_vault_authority: UncheckedAccount<'info>,
+
     #[account(mut)]
     pub fee_vault: AccountLoader<'info, FeeVault>,
 
-    pub creator: Signer<'info>,
-
-    #[account(has_one = quote_mint)]
+    #[account(has_one=quote_mint)]
     pub config: AccountLoader<'info, PoolConfig>,
 
-    /// CHECK: The virtual pool
+    /// CHECK: bdc virtual pool
     #[account(mut)]
     pub pool: UncheckedAccount<'info>,
 
@@ -25,7 +33,7 @@ pub struct ClaimDbcCreatorTradingFeeCtx<'info> {
     #[account(mut)]
     pub token_a_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    /// The token b account
+    /// The treasury token b account
     #[account(mut)]
     pub token_b_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
@@ -55,12 +63,12 @@ pub struct ClaimDbcCreatorTradingFeeCtx<'info> {
     /// CHECK: dbc program
     #[account(address = dynamic_bonding_curve::ID)]
     pub dbc_program: UncheckedAccount<'info>,
-    /// CHECK: dbc event authority
+    /// CHECK: dbc authority
     pub dbc_event_authority: UncheckedAccount<'info>,
 }
 
-pub fn handle_claim_dbc_creator_trading_fee(
-    ctx: Context<ClaimDbcCreatorTradingFeeCtx>,
+pub fn handle_funding_by_claim_dbc_trading_fee(
+    ctx: Context<FundingByClaimDbcTradingFeeCtx>,
 ) -> Result<()> {
     let config = ctx.accounts.config.load()?;
     let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
@@ -77,11 +85,14 @@ pub fn handle_claim_dbc_creator_trading_fee(
 
     let before_token_vault_balance = ctx.accounts.token_b_account.amount;
 
-    dynamic_bonding_curve::cpi::claim_creator_trading_fee(
-        CpiContext::new(
+    let signer_seeds = fee_vault_authority_seeds!();
+
+    dynamic_bonding_curve::cpi::claim_trading_fee(
+        CpiContext::new_with_signer(
             ctx.accounts.dbc_program.to_account_info(),
-            dynamic_bonding_curve::cpi::accounts::ClaimCreatorTradingFee {
+            dynamic_bonding_curve::cpi::accounts::ClaimTradingFee {
                 pool_authority: ctx.accounts.dbc_pool_authority.to_account_info(),
+                config: ctx.accounts.config.to_account_info(),
                 pool: ctx.accounts.pool.to_account_info(),
                 token_a_account: ctx.accounts.token_a_account.to_account_info(),
                 token_b_account: ctx.accounts.token_b_account.to_account_info(),
@@ -89,15 +100,16 @@ pub fn handle_claim_dbc_creator_trading_fee(
                 quote_vault: ctx.accounts.quote_vault.to_account_info(),
                 base_mint: ctx.accounts.base_mint.to_account_info(),
                 quote_mint: ctx.accounts.quote_mint.to_account_info(),
-                creator: ctx.accounts.creator.to_account_info(),
+                fee_claimer: ctx.accounts.fee_vault_authority.to_account_info(),
                 token_base_program: ctx.accounts.token_base_program.to_account_info(),
                 token_quote_program: ctx.accounts.token_quote_program.to_account_info(),
                 event_authority: ctx.accounts.dbc_event_authority.to_account_info(),
                 program: ctx.accounts.dbc_program.to_account_info(),
             },
+            &[signer_seeds],
         ),
-        0,        // max base amount,
-        u64::MAX, // max quote amount,
+        0,        // max_amount_a, fee only token b
+        u64::MAX, // max_amount_b,
     )?;
     ctx.accounts.token_b_account.reload()?;
 
@@ -107,11 +119,12 @@ pub fn handle_claim_dbc_creator_trading_fee(
 
     fee_vault.fund_fee(claimed_amount)?;
 
-    emit_cpi!(EvtClaimDbcCreatorTradingFee {
+    emit_cpi!(EvtFundFee {
+        funding_type: FundingType::ClaimDbcTradingFee,
         fee_vault: ctx.accounts.fee_vault.key(),
-        pool: ctx.accounts.pool.key(),
+        funder: ctx.accounts.pool.key(),
+        funded_amount: claimed_amount,
         fee_per_share: fee_vault.fee_per_share,
-        claimed_amount,
     });
 
     Ok(())

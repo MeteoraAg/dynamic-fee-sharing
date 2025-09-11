@@ -1,11 +1,26 @@
 import { LiteSVM } from "litesvm";
-import { PublicKey, Keypair } from "@solana/web3.js";
-import { generateUsers, getTokenBalance, startSvm } from "./common/svm";
-import { createToken, getFeeVault, mintToken } from "./common";
+import { PublicKey, Keypair, Transaction } from "@solana/web3.js";
+import {
+  generateUsers,
+  getTokenBalance,
+  sendTransactionOrExpectThrowError,
+  startSvm,
+} from "./common/svm";
+import {
+  createToken,
+  deriveFeeVaultAuthorityAddress,
+  getFeeVault,
+  mintToken,
+} from "./common";
 import { createDammV2Pool, dammV2Swap } from "./common/damm_v2";
 import { claimDammV2Fee, createFeeVaultPda } from "./common/dfs";
 import { BN } from "bn.js";
 import { expect } from "chai";
+import {
+  AuthorityType,
+  createSetAuthorityInstruction,
+  TOKEN_2022_PROGRAM_ID,
+} from "@solana/spl-token";
 
 describe("Claim damm v2 fee", () => {
   let svm: LiteSVM;
@@ -37,6 +52,20 @@ describe("Claim damm v2 fee", () => {
     dammV2Pool = createDmmV2PoolRes.pool;
     position = createDmmV2PoolRes.position;
     positionNftAccount = createDmmV2PoolRes.positionNftAccount;
+
+    const setAuthorityIx = createSetAuthorityInstruction(
+      positionNftAccount,
+      creator.publicKey,
+      AuthorityType.AccountOwner,
+      deriveFeeVaultAuthorityAddress(),
+      [],
+      TOKEN_2022_PROGRAM_ID
+    );
+    const assignOwnerTx = new Transaction().add(setAuthorityIx);
+    assignOwnerTx.recentBlockhash = svm.latestBlockhash();
+    assignOwnerTx.sign(creator);
+
+    sendTransactionOrExpectThrowError(svm, assignOwnerTx);
   });
 
   it("fullflow claim damm v2", async () => {

@@ -7,6 +7,7 @@ pub mod constants;
 pub mod error;
 pub mod instructions;
 pub use instructions::*;
+pub mod const_pda;
 pub mod event;
 pub mod math;
 pub mod state;
@@ -36,24 +37,32 @@ pub mod dynamic_fee_sharing {
         instructions::handle_fund_fee(ctx, max_amount)
     }
 
-    pub fn claim_dammv2_fee(ctx: Context<ClaimDammv2FeeCtx>) -> Result<()> {
-        instructions::handle_claim_dammv2_fee(ctx)
+    pub fn funding_by_claim_dammv2_fee(ctx: Context<FundingByClaimDammv2FeeCtx>) -> Result<()> {
+        instructions::handle_funding_by_claim_dammv2_fee(ctx)
     }
 
-    pub fn claim_dbc_trading_fee(ctx: Context<ClaimDbcTradingFeeCtx>) -> Result<()> {
-        instructions::handle_claim_dbc_trading_fee(ctx)
+    pub fn funding_by_claim_dbc_trading_fee(
+        ctx: Context<FundingByClaimDbcTradingFeeCtx>,
+    ) -> Result<()> {
+        instructions::handle_funding_by_claim_dbc_trading_fee(ctx)
     }
 
-    pub fn claim_dbc_creator_trading_fee(ctx: Context<ClaimDbcCreatorTradingFeeCtx>) -> Result<()> {
-        instructions::handle_claim_dbc_creator_trading_fee(ctx)
+    pub fn funding_by_claim_dbc_creator_trading_fee(
+        ctx: Context<FundingByClaimDbcCreatorTradingFeeCtx>,
+    ) -> Result<()> {
+        instructions::handle_funding_by_claim_dbc_creator_trading_fee(ctx)
     }
 
-    pub fn withdraw_dbc_creator_surplus(ctx: Context<WithdrawDbcCreatorSurplusCtx>) -> Result<()> {
-        instructions::handle_withdraw_dbc_creator_surplus(ctx)
+    pub fn funding_by_claim_dbc_creator_surplus(
+        ctx: Context<FundingByClaimDbcCreatorSurplusCtx>,
+    ) -> Result<()> {
+        instructions::handle_funding_by_claim_dbc_creator_surplus(ctx)
     }
 
-    pub fn withdraw_dbc_partner_surplus(ctx: Context<WithdrawDbcPartnerSurplusCtx>) -> Result<()> {
-        instructions::handle_withdraw_dbc_partner_surplus(ctx)
+    pub fn funding_by_claim_dbc_partner_surplus(
+        ctx: Context<FundingByClaimDbcPartnerSurplusCtx>,
+    ) -> Result<()> {
+        instructions::handle_funding_by_claim_dbc_partner_surplus(ctx)
     }
 
     pub fn claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {

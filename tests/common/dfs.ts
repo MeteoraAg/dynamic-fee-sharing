@@ -7,13 +7,12 @@ import {
   getOrCreateAtA,
   InitializeFeeVaultParameters,
 } from ".";
-import { LiteSVM, TransactionMetadata } from "litesvm";
+import { LiteSVM } from "litesvm";
 import {
   getAssociatedTokenAddressSync,
   TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import { expect } from "chai";
 import {
   DAMM_V2_PROGRAM_ID,
   deriveDammV2EventAuthority,
@@ -87,10 +86,10 @@ export async function claimDammV2Fee(
   );
 
   const tx = await program.methods
-    .claimDammv2Fee()
+    .fundingByClaimDammv2Fee()
     .accountsPartial({
+      feeVaultAuthority: deriveFeeVaultAuthorityAddress(),
       feeVault,
-      owner: owner.publicKey,
       pool: dammv2Pool,
       position,
       positionNftAccount,
@@ -135,10 +134,10 @@ export async function claimDbcCreatorTradingFee(
   );
 
   const tx = await program.methods
-    .claimDbcCreatorTradingFee()
+    .fundingByClaimDbcCreatorTradingFee()
     .accountsPartial({
       feeVault,
-      creator: creator.publicKey,
+      feeVaultAuthority: deriveFeeVaultAuthorityAddress(),
       config: poolConfig,
       pool: virtualPool,
       tokenAAccount,
@@ -158,7 +157,7 @@ export async function claimDbcCreatorTradingFee(
   tx.recentBlockhash = svm.latestBlockhash();
   tx.sign(creator);
 
-  sendTransactionOrExpectThrowError(svm, tx, false);
+  sendTransactionOrExpectThrowError(svm, tx);
 }
 
 export async function claimDbcTradingFee(
@@ -182,10 +181,10 @@ export async function claimDbcTradingFee(
   );
 
   const tx = await program.methods
-    .claimDbcTradingFee()
+    .fundingByClaimDbcTradingFee()
     .accountsPartial({
       feeVault,
-      feeClaimer: feeClaimer.publicKey,
+      feeVaultAuthority: deriveFeeVaultAuthorityAddress(),
       config: poolConfig,
       pool: virtualPool,
       tokenAAccount,
@@ -221,10 +220,10 @@ export async function withdrawDbcCreatorSurplus(
   const poolConfigState = getVirtualConfigState(svm, poolConfig);
 
   const tx = await program.methods
-    .withdrawDbcCreatorSurplus()
+    .fundingByClaimDbcCreatorSurplus()
     .accountsPartial({
       feeVault,
-      creator: creator.publicKey,
+      feeVaultAuthority: deriveFeeVaultAuthorityAddress(),
       config: poolConfig,
       pool: virtualPool,
       tokenQuoteAccount: tokenVault,
@@ -257,10 +256,10 @@ export async function withdrawDbcPartnerSurplus(
   const poolConfigState = getVirtualConfigState(svm, poolConfig);
 
   const tx = await program.methods
-    .withdrawDbcPartnerSurplus()
+    .fundingByClaimDbcPartnerSurplus()
     .accountsPartial({
       feeVault,
-      feeClaimer: feeClaimer.publicKey,
+      feeVaultAuthority: deriveFeeVaultAuthorityAddress(),
       config: poolConfig,
       pool: virtualPool,
       tokenQuoteAccount: tokenVault,

@@ -2,16 +2,24 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
 
 use crate::{
-    error::FeeVaultError, event::EvtDbcPartnerWithdrawSurplus, math::SafeMath, state::FeeVault,
+    const_pda,
+    error::FeeVaultError,
+    event::EvtFundFee,
+    math::SafeMath,
+    state::{FeeVault, FundingType},
 };
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct WithdrawDbcPartnerSurplusCtx<'info> {
+pub struct FundingByClaimDbcPartnerSurplusCtx<'info> {
+    /// CHECK: fee vault authority
+    #[account(
+        address = const_pda::fee_vault_authority::ID
+    )]
+    pub fee_vault_authority: UncheckedAccount<'info>,
+
     #[account(mut)]
     pub fee_vault: AccountLoader<'info, FeeVault>,
-
-    pub fee_claimer: Signer<'info>,
 
     /// CHECK: The pool config
     pub config: UncheckedAccount<'info>,
@@ -47,8 +55,8 @@ pub struct WithdrawDbcPartnerSurplusCtx<'info> {
     pub dbc_event_authority: UncheckedAccount<'info>,
 }
 
-pub fn handle_withdraw_dbc_partner_surplus(
-    ctx: Context<WithdrawDbcPartnerSurplusCtx>,
+pub fn handle_funding_by_claim_dbc_partner_surplus(
+    ctx: Context<FundingByClaimDbcPartnerSurplusCtx>,
 ) -> Result<()> {
     let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
 
@@ -62,7 +70,9 @@ pub fn handle_withdraw_dbc_partner_surplus(
 
     let before_token_vault_balance = ctx.accounts.token_quote_account.amount;
 
-    dynamic_bonding_curve::cpi::partner_withdraw_surplus(CpiContext::new(
+    let signer_seeds = fee_vault_authority_seeds!();
+
+    dynamic_bonding_curve::cpi::partner_withdraw_surplus(CpiContext::new_with_signer(
         ctx.accounts.dbc_program.to_account_info(),
         dynamic_bonding_curve::cpi::accounts::PartnerWithdrawSurplus {
             pool_authority: ctx.accounts.dbc_pool_authority.to_account_info(),
@@ -71,25 +81,27 @@ pub fn handle_withdraw_dbc_partner_surplus(
             token_quote_account: ctx.accounts.token_quote_account.to_account_info(),
             quote_vault: ctx.accounts.quote_vault.to_account_info(),
             quote_mint: ctx.accounts.quote_mint.to_account_info(),
-            fee_claimer: ctx.accounts.fee_claimer.to_account_info(),
+            fee_claimer: ctx.accounts.fee_vault_authority.to_account_info(),
             token_quote_program: ctx.accounts.token_quote_program.to_account_info(),
             event_authority: ctx.accounts.dbc_event_authority.to_account_info(),
             program: ctx.accounts.dbc_program.to_account_info(),
         },
+        &[signer_seeds],
     ))?;
     ctx.accounts.token_quote_account.reload()?;
 
     let after_token_vault_balance = ctx.accounts.token_quote_account.amount;
 
-    let withdrawal_amount = after_token_vault_balance.safe_sub(before_token_vault_balance)?;
+    let claimed_amount = after_token_vault_balance.safe_sub(before_token_vault_balance)?;
 
-    fee_vault.fund_fee(withdrawal_amount)?;
+    fee_vault.fund_fee(claimed_amount)?;
 
-    emit_cpi!(EvtDbcPartnerWithdrawSurplus {
+    emit_cpi!(EvtFundFee {
+        funding_type: FundingType::ClaimDbcSurplus,
         fee_vault: ctx.accounts.fee_vault.key(),
-        pool: ctx.accounts.pool.key(),
+        funder: ctx.accounts.pool.key(),
+        funded_amount: claimed_amount,
         fee_per_share: fee_vault.fee_per_share,
-        withdrawal_amount,
     });
 
     Ok(())

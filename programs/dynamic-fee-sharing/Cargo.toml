@@ -24,6 +24,7 @@ bytemuck = { workspace = true }
 num_enum = "0.7.0"
 ruint = "1.3.0"
 static_assertions = "1.1.0"
+const-crypto = "0.3.0"
 damm-v2 = { path = "../../libs/damm-v2" }
 dynamic-bonding-curve = { path = "../../libs/dynamic-bonding-curve" }
 

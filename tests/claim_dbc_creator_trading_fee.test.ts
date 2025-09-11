@@ -3,7 +3,12 @@ import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { config, expect } from "chai";
 import { LiteSVM } from "litesvm";
 import { generateUsers, getTokenBalance, startSvm } from "./common/svm";
-import { createToken, getFeeVault, mintToken } from "./common";
+import {
+  createToken,
+  deriveFeeVaultAuthorityAddress,
+  getFeeVault,
+  mintToken,
+} from "./common";
 import {
   buildDefaultCurve,
   createConfig,
@@ -13,6 +18,7 @@ import {
   getVirtualPoolState,
   swap,
   SwapParams,
+  transferCreator,
 } from "./common/dbc";
 import {
   claimDbcCreatorTradingFee,
@@ -44,8 +50,8 @@ describe("Claim fee and withdraw dbc surplus", () => {
     let instructionParams = buildDefaultCurve();
     const params: CreateConfigParams = {
       payer: feeClaimer,
-      leftoverReceiver: feeClaimer.publicKey,
-      feeClaimer: feeClaimer.publicKey,
+      leftoverReceiver: deriveFeeVaultAuthorityAddress(),
+      feeClaimer: deriveFeeVaultAuthorityAddress(),
       quoteMint,
       instructionParams,
     };
@@ -71,6 +77,9 @@ describe("Claim fee and withdraw dbc surplus", () => {
         uri: "abc.com",
       },
     });
+
+    // transfer pool creator
+    await transferCreator(svm, virtualPool, poolCreator, deriveFeeVaultAuthorityAddress())
 
     let virtualPoolState = getVirtualPoolState(svm, virtualPool);
     let configState = getVirtualConfigState(svm, virtualPoolConfig);
@@ -189,7 +198,7 @@ describe("Claim fee and withdraw dbc surplus", () => {
     expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
   });
 
-    it("withdraw dbc creator surplus", async () => {
+  it("withdraw dbc creator surplus", async () => {
     const { feeVault, tokenVault } = await createFeeVaultPda(
       svm,
       admin,

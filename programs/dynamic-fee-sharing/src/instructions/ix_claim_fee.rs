@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-use crate::constants::seeds::FEE_VAULT_AUTHORITY_PREFIX;
+use crate::const_pda;
 use crate::event::EvtClaimFee;
 use crate::state::FeeVault;
 use crate::utils::token::transfer_from_fee_vault;
@@ -9,17 +9,14 @@ use crate::utils::token::transfer_from_fee_vault;
 #[event_cpi]
 #[derive(Accounts)]
 pub struct ClaimFeeCtx<'info> {
+    /// CHECK: fee vault authority
+    #[account(
+        address = const_pda::fee_vault_authority::ID
+    )]
+    pub fee_vault_authority: UncheckedAccount<'info>,
+
     #[account(mut, has_one = token_vault, has_one = token_mint)]
     pub fee_vault: AccountLoader<'info, FeeVault>,
-
-    /// CHECK: pool authority
-    #[account(
-            seeds = [
-                FEE_VAULT_AUTHORITY_PREFIX.as_ref(),
-            ],
-            bump,
-        )]
-    pub fee_vault_authority: UncheckedAccount<'info>,
 
     #[account(mut)]
     pub token_vault: Box<InterfaceAccount<'info, TokenAccount>>,
@@ -46,7 +43,6 @@ pub fn handle_claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {
             &ctx.accounts.user_token_vault,
             &ctx.accounts.token_program,
             fee_being_claimed,
-            ctx.bumps.fee_vault_authority,
         )?;
 
         emit_cpi!(EvtClaimFee {

@@ -250,6 +250,38 @@ export async function swap(svm: LiteSVM, params: SwapParams): Promise<void> {
   sendTransactionOrExpectThrowError(svm, transaction);
 }
 
+export async function transferCreator(
+  svm: LiteSVM,
+  virtualPool: PublicKey,
+  creator: Keypair,
+  newCreator: PublicKey
+): Promise<void> {
+  const program = createDBCProgram();
+  const poolState = getVirtualPoolState(svm, virtualPool);
+  const migrationMetadata = deriveMigrationMetadataAddress(virtualPool);
+  const transaction = await program.methods
+    .transferPoolCreator()
+    .accountsPartial({
+      virtualPool,
+      newCreator,
+      config: poolState.config,
+      creator: creator.publicKey,
+    })
+    .remainingAccounts([
+      {
+        isSigner: false,
+        isWritable: false,
+        pubkey: migrationMetadata,
+      },
+    ])
+    .transaction();
+
+  transaction.recentBlockhash = svm.latestBlockhash();
+  transaction.sign(creator);
+
+  sendTransactionOrExpectThrowError(svm, transaction);
+}
+
 export function getVirtualPoolState(
   svm: LiteSVM,
   virtualPool: PublicKey
@@ -269,6 +301,15 @@ export function getVirtualConfigState(
   const program = createDBCProgram();
   const account = svm.getAccount(virtualPool);
   return program.coder.accounts.decode("poolConfig", Buffer.from(account.data));
+}
+
+export function deriveMigrationMetadataAddress(
+  virtual_pool: PublicKey
+): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("meteora"), virtual_pool.toBuffer()],
+    DBC_PROGRAM_ID
+  )[0];
 }
 
 function derivePoolAddress(

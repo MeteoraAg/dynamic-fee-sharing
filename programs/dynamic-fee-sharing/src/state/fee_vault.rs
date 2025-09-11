@@ -7,6 +7,15 @@ use crate::{
 use anchor_lang::prelude::*;
 use static_assertions::const_assert_eq;
 
+#[derive(AnchorSerialize, AnchorDeserialize, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum FundingType {
+    Direct,
+    ClaimDammV2,
+    ClaimDbcTradingFee,
+    ClaimDbcSurplus,
+}
+
 #[account(zero_copy)]
 #[derive(InitSpace, Debug, Default)]
 pub struct FeeVault {
