@@ -22,9 +22,9 @@ pub struct FundingByClaimDbcTradingFeeCtx<'info> {
     #[account(mut)]
     pub pool: UncheckedAccount<'info>,
 
-    /// This account use to satisfy accounts context. The pool only has fee in token b account
+    /// CHECK: This account use to satisfy accounts context. The pool only has fee in token b account
     #[account(mut)]
-    pub token_a_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub token_a_account: UncheckedAccount<'info>,
 
     /// The treasury token b account
     #[account(mut)]

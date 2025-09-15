@@ -25,10 +25,9 @@ pub struct FundingByClaimDammv2FeeCtx<'info> {
     /// The token account for nft
     pub position_nft_account: UncheckedAccount<'info>,
 
-    /// The user token a account
-    /// This account use to satisfy accounts context. The pool only has fee in token b account
+    /// CHECK: This account use to satisfy accounts context. The pool only has fee in token b account
     #[account(mut)]
-    pub token_a_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub token_a_account: UncheckedAccount<'info>,
 
     /// The user token b account
     #[account(mut)]
