@@ -41,10 +41,10 @@ pub mod dynamic_fee_sharing {
         instructions::handle_funding_by_claim_dammv2_fee(ctx)
     }
 
-    pub fn funding_by_claim_dbc_trading_fee(
+    pub fn funding_by_claim_dbc_partner_trading_fee(
         ctx: Context<FundingByClaimDbcTradingFeeCtx>,
     ) -> Result<()> {
-        instructions::handle_funding_by_claim_dbc_trading_fee(ctx)
+        instructions::handle_funding_by_claim_dbc_partner_trading_fee(ctx)
     }
 
     pub fn funding_by_claim_dbc_creator_trading_fee(

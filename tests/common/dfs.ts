@@ -179,7 +179,7 @@ export async function claimDbcTradingFee(
   );
 
   const tx = await program.methods
-    .fundingByClaimDbcTradingFee()
+    .fundingByClaimDbcPartnerTradingFee()
     .accountsPartial({
       feeVault,
       config: poolConfig,

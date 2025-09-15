@@ -60,7 +60,7 @@ pub struct FundingByClaimDbcTradingFeeCtx<'info> {
     pub dbc_event_authority: UncheckedAccount<'info>,
 }
 
-pub fn handle_funding_by_claim_dbc_trading_fee(
+pub fn handle_funding_by_claim_dbc_partner_trading_fee(
     ctx: Context<FundingByClaimDbcTradingFeeCtx>,
 ) -> Result<()> {
     let config = ctx.accounts.config.load()?;
@@ -127,7 +127,7 @@ pub fn handle_funding_by_claim_dbc_trading_fee(
         fee_vault.fund_fee(claimed_amount)?;
 
         emit_cpi!(EvtFundFee {
-            funding_type: FundingType::ClaimDbcTradingFee,
+            funding_type: FundingType::ClaimDbcPartnerTradingFee,
             fee_vault: ctx.accounts.fee_vault.key(),
             funder: ctx.accounts.pool.key(),
             funded_amount: claimed_amount,

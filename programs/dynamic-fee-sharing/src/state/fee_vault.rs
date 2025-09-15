@@ -13,8 +13,10 @@ use static_assertions::const_assert_eq;
 pub enum FundingType {
     Direct,
     ClaimDammV2,
-    ClaimDbcTradingFee,
-    ClaimDbcSurplus,
+    ClaimDbcPartnerTradingFee,
+    ClaimDbcCreatorTradingFee,
+    ClaimDbcPartnerSurplus,
+    ClaimDbcCreatorSurplus,
 }
 
 #[repr(u8)]

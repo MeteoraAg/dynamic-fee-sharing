@@ -104,7 +104,7 @@ pub fn handle_funding_by_claim_dbc_partner_surplus(
         fee_vault.fund_fee(claimed_amount)?;
 
         emit_cpi!(EvtFundFee {
-            funding_type: FundingType::ClaimDbcSurplus,
+            funding_type: FundingType::ClaimDbcPartnerSurplus,
             fee_vault: ctx.accounts.fee_vault.key(),
             funder: ctx.accounts.pool.key(),
             funded_amount: claimed_amount,
