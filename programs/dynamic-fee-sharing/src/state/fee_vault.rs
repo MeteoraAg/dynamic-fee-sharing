@@ -5,7 +5,35 @@ use crate::{
     math::{mul_shr, shl_div, SafeMath},
 };
 use anchor_lang::prelude::*;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use static_assertions::const_assert_eq;
+
+#[derive(AnchorSerialize, AnchorDeserialize, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum FundingType {
+    Direct,
+    ClaimDammV2,
+    ClaimDbcPartnerTradingFee,
+    ClaimDbcCreatorTradingFee,
+    ClaimDbcPartnerSurplus,
+    ClaimDbcCreatorSurplus,
+}
+
+#[repr(u8)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    IntoPrimitive,
+    TryFromPrimitive,
+    AnchorDeserialize,
+    AnchorSerialize,
+)]
+pub enum FeeVaultType {
+    NonPdaAccount,
+    PdaAccount,
+}
 
 #[account(zero_copy)]
 #[derive(InitSpace, Debug, Default)]
@@ -14,12 +42,15 @@ pub struct FeeVault {
     pub token_mint: Pubkey,
     pub token_vault: Pubkey,
     pub token_flag: u8, // indicate whether token is spl-token or token2022
-    pub padding_0: [u8; 15],
+    pub fee_vault_type: u8,
+    pub fee_vault_bump: u8,
+    pub padding_0: [u8; 13],
     pub total_share: u32,
     pub padding_1: [u8; 4],
     pub total_funded_fee: u64,
     pub fee_per_share: u128,
-    pub padding: [u128; 6],
+    pub base: Pubkey,
+    pub padding: [u128; 4],
     pub users: [UserFee; MAX_USER],
 }
 const_assert_eq!(FeeVault::INIT_SPACE, 640);
@@ -43,6 +74,9 @@ impl FeeVault {
         token_flag: u8,
         token_mint: &Pubkey,
         token_vault: &Pubkey,
+        base: &Pubkey,
+        fee_vault_bump: u8,
+        fee_vault_type: u8,
         users: &[UserShare],
     ) -> Result<()> {
         self.owner = *owner;
@@ -59,6 +93,10 @@ impl FeeVault {
             total_share = total_share.safe_add(users[i].share)?;
         }
         self.total_share = total_share;
+        self.base = *base;
+        self.fee_vault_bump = fee_vault_bump;
+        self.fee_vault_type = fee_vault_type;
+
         Ok(())
     }
 

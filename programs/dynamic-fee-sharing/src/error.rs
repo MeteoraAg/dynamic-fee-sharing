@@ -25,4 +25,13 @@ pub enum FeeVaultError {
 
     #[msg("Exceeded number of users allowed")]
     ExceededUser,
+
+    #[msg("Invalid fee vault")]
+    InvalidFeeVault,
+
+    #[msg("Invalid dammv2 pool")]
+    InvalidDammv2Pool,
+
+    #[msg("Invalid dammv2 pool")]
+    InvalidDbcPool,
 }

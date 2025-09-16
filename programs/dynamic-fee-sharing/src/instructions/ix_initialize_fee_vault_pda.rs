@@ -1,5 +1,6 @@
 use crate::constants::seeds::FEE_VAULT_PREFIX;
 use crate::event::EvtInitializeFeeVault;
+use crate::state::FeeVaultType;
 use crate::{
     constants::seeds::{FEE_VAULT_AUTHORITY_PREFIX, TOKEN_VAULT_PREFIX},
     state::FeeVault,
@@ -76,6 +77,9 @@ pub fn handle_initialize_fee_vault_pda(
         &ctx.accounts.fee_vault,
         ctx.accounts.owner.key,
         &ctx.accounts.token_vault.key(),
+        &ctx.accounts.base.key,
+        ctx.bumps.fee_vault,
+        FeeVaultType::PdaAccount.into(),
     )?;
 
     emit_cpi!(EvtInitializeFeeVault {

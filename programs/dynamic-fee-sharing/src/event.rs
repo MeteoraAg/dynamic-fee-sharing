@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::InitializeFeeVaultParameters;
+use crate::{state::FundingType, InitializeFeeVaultParameters};
 
 #[event]
 pub struct EvtInitializeFeeVault {
@@ -13,10 +13,10 @@ pub struct EvtInitializeFeeVault {
 
 #[event]
 pub struct EvtFundFee {
+    pub funding_type: FundingType,
     pub fee_vault: Pubkey,
     pub funder: Pubkey,
-    pub excluded_transfer_fee_amount: u64,
-    pub max_amount: u64,
+    pub funded_amount: u64,
     pub fee_per_share: u128,
 }
 

@@ -3,7 +3,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::error::FeeVaultError;
 use crate::event::EvtFundFee;
-use crate::state::FeeVault;
+use crate::state::{FeeVault, FundingType};
 use crate::utils::token::{calculate_transfer_fee_excluded_amount, transfer_from_user};
 
 #[event_cpi]
@@ -46,11 +46,11 @@ pub fn handle_fund_fee(ctx: Context<FundFeeCtx>, max_amount: u64) -> Result<()> 
     )?;
 
     emit_cpi!(EvtFundFee {
+        funding_type: FundingType::Direct,
         fee_vault: ctx.accounts.fee_vault.key(),
         funder: ctx.accounts.funder.key(),
-        fee_per_share: fee_vault.fee_per_share,
-        excluded_transfer_fee_amount,
-        max_amount
+        funded_amount: excluded_transfer_fee_amount,
+        fee_per_share: fee_vault.fee_per_share
     });
 
     Ok(())
