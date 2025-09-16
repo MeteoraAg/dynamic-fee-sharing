@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
+use dynamic_bonding_curve::accounts::VirtualPool;
 
 use crate::{
     error::FeeVaultError,
@@ -17,9 +18,9 @@ pub struct FundingByClaimDbcPartnerSurplusCtx<'info> {
     /// CHECK: The pool config
     pub config: UncheckedAccount<'info>,
 
-    /// CHECK: The virtual pool
+    /// The dbc virtual pool
     #[account(mut)]
-    pub pool: UncheckedAccount<'info>,
+    pub pool: AccountLoader<'info, VirtualPool>,
 
     /// The token b account
     #[account(mut)]
@@ -52,6 +53,14 @@ pub fn handle_funding_by_claim_dbc_partner_surplus(
     ctx: Context<FundingByClaimDbcPartnerSurplusCtx>,
 ) -> Result<()> {
     let fee_vault = ctx.accounts.fee_vault.load()?;
+    let virtual_pool = ctx.accounts.pool.load()?;
+
+    // partner surplus has been withdraw
+    if virtual_pool.is_partner_withdraw_surplus == 1 {
+        return Ok(());
+    }
+
+    drop(virtual_pool);
 
     require!(
         fee_vault
@@ -63,7 +72,7 @@ pub fn handle_funding_by_claim_dbc_partner_surplus(
 
     // support fee vault type is pda account
     require!(
-        fee_vault.fee_vault_type == 0,
+        fee_vault.fee_vault_type == 1,
         FeeVaultError::InvalidFeeVault
     );
 

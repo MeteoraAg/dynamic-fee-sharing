@@ -78,7 +78,7 @@ pub fn handle_funding_by_claim_dbc_creator_trading_fee(
 
     // support fee vault type is pda account
     require!(
-        fee_vault.fee_vault_type == 0,
+        fee_vault.fee_vault_type == 1,
         FeeVaultError::InvalidFeeVault
     );
 

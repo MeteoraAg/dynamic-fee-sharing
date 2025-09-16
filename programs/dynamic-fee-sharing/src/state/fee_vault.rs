@@ -31,8 +31,8 @@ pub enum FundingType {
     AnchorSerialize,
 )]
 pub enum FeeVaultType {
-    PdaAccount,
     NonPdaAccount,
+    PdaAccount,
 }
 
 #[account(zero_copy)]

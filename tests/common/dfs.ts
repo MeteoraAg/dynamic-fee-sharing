@@ -271,5 +271,5 @@ export async function withdrawDbcPartnerSurplus(
   tx.recentBlockhash = svm.latestBlockhash();
   tx.sign(feeClaimer);
 
-  sendTransactionOrExpectThrowError(svm, tx);
+  sendTransactionOrExpectThrowError(svm, tx, true);
 }
