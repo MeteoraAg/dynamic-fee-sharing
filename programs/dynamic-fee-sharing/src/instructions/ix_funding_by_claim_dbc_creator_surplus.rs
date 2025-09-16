@@ -52,15 +52,15 @@ pub struct FundingByClaimDbcCreatorSurplusCtx<'info> {
 pub fn handle_funding_by_claim_dbc_creator_surplus(
     ctx: Context<FundingByClaimDbcCreatorSurplusCtx>,
 ) -> Result<()> {
-    let fee_vault = ctx.accounts.fee_vault.load()?;
     let virtual_pool = ctx.accounts.pool.load()?;
-
     // creator surplus has been withdraw
     if virtual_pool.is_creator_withdraw_surplus == 1 {
         return Ok(());
     }
 
     drop(virtual_pool);
+
+    let fee_vault = ctx.accounts.fee_vault.load()?;
 
     require!(
         fee_vault
