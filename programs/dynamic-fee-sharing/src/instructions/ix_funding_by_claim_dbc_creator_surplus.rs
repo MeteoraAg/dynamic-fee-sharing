@@ -47,6 +47,9 @@ pub struct FundingByClaimDbcCreatorSurplusCtx<'info> {
     pub dbc_program: UncheckedAccount<'info>,
     /// CHECK: dbc event authority
     pub dbc_event_authority: UncheckedAccount<'info>,
+
+    /// signer
+    pub signer: Signer<'info>,
 }
 
 pub fn handle_funding_by_claim_dbc_creator_surplus(
@@ -61,6 +64,10 @@ pub fn handle_funding_by_claim_dbc_creator_surplus(
     drop(virtual_pool);
 
     let fee_vault = ctx.accounts.fee_vault.load()?;
+    require!(
+        fee_vault.is_share_holder(ctx.accounts.signer.key),
+        FeeVaultError::InvalidSigner
+    );
 
     require!(
         fee_vault

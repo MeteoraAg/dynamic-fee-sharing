@@ -130,4 +130,10 @@ impl FeeVault {
 
         Ok(fee_being_claimed)
     }
+
+    pub fn is_share_holder(&self, signer: &Pubkey) -> bool {
+        self.users
+            .iter()
+            .any(|share_holder| share_holder.address.eq(signer))
+    }
 }

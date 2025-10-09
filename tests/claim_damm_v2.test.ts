@@ -9,11 +9,13 @@ import {
 import {
   createToken,
   deriveFeeVaultAuthorityAddress,
+  expectThrowsErrorCode,
   getFeeVault,
+  getProgramErrorCodeHexString,
   mintToken,
 } from "./common";
 import { createDammV2Pool, dammV2Swap } from "./common/damm_v2";
-import { claimDammV2Fee, createFeeVaultPda } from "./common/dfs";
+import { claimDammV2Fee, claimDammV2FeeExpectThrowError, createFeeVaultPda } from "./common/dfs";
 import { BN } from "bn.js";
 import { expect } from "chai";
 import {
@@ -32,10 +34,11 @@ describe("Claim damm v2 fee", () => {
   let dammV2Pool: PublicKey;
   let positionNftAccount: PublicKey;
   let position: PublicKey;
+  let shareHolder: Keypair;
 
   beforeEach(async () => {
     svm = startSvm();
-    [admin, creator, vaultOwner] = generateUsers(svm, 7);
+    [admin, creator, vaultOwner, shareHolder] = generateUsers(svm, 4);
     tokenAMint = createToken(svm, admin, admin.publicKey, null);
     tokenBMint = createToken(svm, admin, admin.publicKey, null);
 
@@ -64,7 +67,7 @@ describe("Claim damm v2 fee", () => {
         padding: [],
         users: [
           {
-            address: PublicKey.unique(),
+            address: shareHolder.publicKey,
             share: 100,
           },
           {
@@ -106,8 +109,21 @@ describe("Claim damm v2 fee", () => {
       minimumAmountOut: new BN(0),
     });
 
+
+    await claimDammV2FeeExpectThrowError(
+      svm,
+      creator,
+      creator,
+      feeVault,
+      tokenVault,
+      dammV2Pool,
+      position,
+      positionNftAccount
+    )
+
     await claimDammV2Fee(
       svm,
+      shareHolder,
       creator,
       feeVault,
       tokenVault,

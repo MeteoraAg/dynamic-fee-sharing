@@ -58,13 +58,21 @@ pub struct FundingByClaimDbcCreatorTradingFeeCtx<'info> {
     pub dbc_program: UncheckedAccount<'info>,
     /// CHECK: dbc event authority
     pub dbc_event_authority: UncheckedAccount<'info>,
+
+    /// signer
+    pub signer: Signer<'info>,
 }
 
 pub fn handle_funding_by_claim_dbc_creator_trading_fee(
     ctx: Context<FundingByClaimDbcCreatorTradingFeeCtx>,
 ) -> Result<()> {
-    let config = ctx.accounts.config.load()?;
     let fee_vault = ctx.accounts.fee_vault.load()?;
+    require!(
+        fee_vault.is_share_holder(ctx.accounts.signer.key),
+        FeeVaultError::InvalidSigner
+    );
+
+    let config = ctx.accounts.config.load()?;
     // support collect fee mode is 0 (only quote token)
     require!(config.collect_fee_mode == 0, FeeVaultError::InvalidDbcPool);
 

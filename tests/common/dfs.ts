@@ -5,6 +5,7 @@ import {
   deriveFeeVaultPdaAddress,
   deriveTokenVaultAddress,
   getOrCreateAtA,
+  getProgramErrorCodeHexString,
   InitializeFeeVaultParameters,
 } from ".";
 import { LiteSVM } from "litesvm";
@@ -66,14 +67,15 @@ export async function createFeeVaultPda(
   return { feeVault, tokenVault };
 }
 
-export async function claimDammV2Fee(
+export async function claimDammV2FeeExpectThrowError(
   svm: LiteSVM,
+  signer: Keypair,
   owner: Keypair,
   feeVault: PublicKey,
   tokenVault: PublicKey,
   dammv2Pool: PublicKey,
   position: PublicKey,
-  positionNftAccount: PublicKey
+  positionNftAccount: PublicKey,
 ) {
   const program = createProgram();
   const dammV2PoolState = getDammV2PoolState(svm, dammv2Pool);
@@ -103,17 +105,71 @@ export async function claimDammV2Fee(
       dammv2EventAuthority: deriveDammV2EventAuthority(),
       dammv2PoolAuthority: deriveDammV2PoolAuthority(),
       dammv2Program: DAMM_V2_PROGRAM_ID,
+      signer: signer.publicKey
     })
     .transaction();
 
   tx.recentBlockhash = svm.latestBlockhash();
-  tx.sign(owner);
+  tx.sign(signer);
 
-  sendTransactionOrExpectThrowError(svm, tx, true);
+  const errorCode = getProgramErrorCodeHexString("InvalidSigner");
+
+  sendTransactionOrExpectThrowError(svm, tx, true, errorCode);
+}
+
+export async function claimDammV2Fee(
+  svm: LiteSVM,
+  signer: Keypair,
+  owner: Keypair,
+  feeVault: PublicKey,
+  tokenVault: PublicKey,
+  dammv2Pool: PublicKey,
+  position: PublicKey,
+  positionNftAccount: PublicKey,
+) {
+  const program = createProgram();
+  const dammV2PoolState = getDammV2PoolState(svm, dammv2Pool);
+
+  const tokenAAccount = getAssociatedTokenAddressSync(
+    dammV2PoolState.tokenAMint,
+    owner.publicKey,
+    true,
+    getProgramFromFlagDammV2(dammV2PoolState.tokenAFlag)
+  );
+
+  const tx = await program.methods
+    .fundingByClaimDammv2Fee()
+    .accountsPartial({
+      feeVault,
+      pool: dammv2Pool,
+      position,
+      positionNftAccount,
+      tokenAAccount,
+      tokenBAccount: tokenVault,
+      tokenAVault: dammV2PoolState.tokenAVault,
+      tokenBVault: dammV2PoolState.tokenBVault,
+      tokenAMint: dammV2PoolState.tokenAMint,
+      tokenBMint: dammV2PoolState.tokenBMint,
+      tokenAProgram: getProgramFromFlagDammV2(dammV2PoolState.tokenAFlag),
+      tokenBProgram: getProgramFromFlagDammV2(dammV2PoolState.tokenBFlag),
+      dammv2EventAuthority: deriveDammV2EventAuthority(),
+      dammv2PoolAuthority: deriveDammV2PoolAuthority(),
+      dammv2Program: DAMM_V2_PROGRAM_ID,
+      signer: signer.publicKey
+    })
+    .transaction();
+
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(signer);
+
+  const result = sendTransactionOrExpectThrowError(svm, tx, true);
+
+  return result
 }
 
 export async function claimDbcCreatorTradingFee(
   svm: LiteSVM,
+  signer: Keypair,
   creator: Keypair,
   feeVault: PublicKey,
   tokenVault: PublicKey,
@@ -149,17 +205,19 @@ export async function claimDbcCreatorTradingFee(
       dbcEventAuthority: deriveDbcEventAuthority(),
       dbcPoolAuthority: deriveDbcPoolAuthority(),
       dbcProgram: DBC_PROGRAM_ID,
+      signer: signer.publicKey
     })
     .transaction();
 
   tx.recentBlockhash = svm.latestBlockhash();
-  tx.sign(creator);
+  tx.sign(signer);
 
   sendTransactionOrExpectThrowError(svm, tx);
 }
 
 export async function claimDbcTradingFee(
   svm: LiteSVM,
+  signer: Keypair,
   feeClaimer: Keypair,
   feeVault: PublicKey,
   tokenVault: PublicKey,
@@ -195,18 +253,19 @@ export async function claimDbcTradingFee(
       dbcEventAuthority: deriveDbcEventAuthority(),
       dbcPoolAuthority: deriveDbcPoolAuthority(),
       dbcProgram: DBC_PROGRAM_ID,
+      signer: signer.publicKey
     })
     .transaction();
 
   tx.recentBlockhash = svm.latestBlockhash();
-  tx.sign(feeClaimer);
+  tx.sign(signer);
 
   sendTransactionOrExpectThrowError(svm, tx);
 }
 
 export async function withdrawDbcCreatorSurplus(
   svm: LiteSVM,
-  creator: Keypair,
+  signer: Keypair,
   feeVault: PublicKey,
   tokenVault: PublicKey,
   poolConfig: PublicKey,
@@ -230,18 +289,19 @@ export async function withdrawDbcCreatorSurplus(
       dbcEventAuthority: deriveDbcEventAuthority(),
       dbcPoolAuthority: deriveDbcPoolAuthority(),
       dbcProgram: DBC_PROGRAM_ID,
+      signer: signer.publicKey
     })
     .transaction();
 
   tx.recentBlockhash = svm.latestBlockhash();
-  tx.sign(creator);
+  tx.sign(signer);
 
   sendTransactionOrExpectThrowError(svm, tx, true);
 }
 
 export async function withdrawDbcPartnerSurplus(
   svm: LiteSVM,
-  feeClaimer: Keypair,
+  signer: Keypair,
   feeVault: PublicKey,
   tokenVault: PublicKey,
   poolConfig: PublicKey,
@@ -265,11 +325,12 @@ export async function withdrawDbcPartnerSurplus(
       dbcEventAuthority: deriveDbcEventAuthority(),
       dbcPoolAuthority: deriveDbcPoolAuthority(),
       dbcProgram: DBC_PROGRAM_ID,
+      signer: signer.publicKey
     })
     .transaction();
 
   tx.recentBlockhash = svm.latestBlockhash();
-  tx.sign(feeClaimer);
+  tx.sign(signer);
 
   sendTransactionOrExpectThrowError(svm, tx, true);
 }

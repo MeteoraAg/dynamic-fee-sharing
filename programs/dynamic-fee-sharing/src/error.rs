@@ -34,4 +34,7 @@ pub enum FeeVaultError {
 
     #[msg("Invalid dammv2 pool")]
     InvalidDbcPool,
+
+    #[msg("Invalid signer")]
+    InvalidSigner,
 }

@@ -65,6 +65,9 @@ pub struct FundingByClaimDammv2FeeCtx<'info> {
     pub dammv2_program: UncheckedAccount<'info>,
     /// CHECK: dammv2 authority
     pub dammv2_event_authority: UncheckedAccount<'info>,
+
+    /// signer
+    pub signer: Signer<'info>,
 }
 
 pub fn handle_funding_by_claim_dammv2_fee(ctx: Context<FundingByClaimDammv2FeeCtx>) -> Result<()> {
@@ -73,6 +76,10 @@ pub fn handle_funding_by_claim_dammv2_fee(ctx: Context<FundingByClaimDammv2FeeCt
     require!(pool.collect_fee_mode == 1, FeeVaultError::InvalidDammv2Pool);
 
     let fee_vault = ctx.accounts.fee_vault.load()?;
+    require!(
+        fee_vault.is_share_holder(ctx.accounts.signer.key),
+        FeeVaultError::InvalidSigner
+    );
 
     require!(
         fee_vault
