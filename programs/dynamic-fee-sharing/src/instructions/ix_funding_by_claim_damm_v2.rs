@@ -2,12 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
 use damm_v2::accounts::Pool;
 
-use crate::{
-    error::FeeVaultError,
-    event::EvtFundFee,
-    math::SafeMath,
-    state::{FeeVault, FundingType},
-};
+use crate::{error::FeeVaultError, handle_funding_fee, state::FeeVault};
 
 #[event_cpi]
 #[derive(Accounts)]
@@ -75,76 +70,45 @@ pub fn handle_funding_by_claim_dammv2_fee(ctx: Context<FundingByClaimDammv2FeeCt
     // support collect fee mode is 1 (only token B)
     require!(pool.collect_fee_mode == 1, FeeVaultError::InvalidDammv2Pool);
 
-    let fee_vault = ctx.accounts.fee_vault.load()?;
-    require!(
-        fee_vault.is_share_holder(ctx.accounts.signer.key),
-        FeeVaultError::InvalidSigner
-    );
+    handle_funding_fee(
+        ctx.accounts.signer.key,
+        &ctx.accounts.fee_vault,
+        &mut ctx.accounts.token_b_account.clone(),
+        ctx.accounts.token_b_mint.key,
+        |signer_seeds| {
+            damm_v2::cpi::claim_position_fee(CpiContext::new_with_signer(
+                ctx.accounts.dammv2_program.to_account_info(),
+                damm_v2::cpi::accounts::ClaimPositionFee {
+                    pool_authority: ctx.accounts.dammv2_pool_authority.to_account_info(),
+                    pool: ctx.accounts.pool.to_account_info(),
+                    position: ctx.accounts.position.to_account_info(),
+                    token_a_account: ctx.accounts.token_a_account.to_account_info(),
+                    token_b_account: ctx.accounts.token_b_account.to_account_info(),
+                    token_a_vault: ctx.accounts.token_a_vault.to_account_info(),
+                    token_b_vault: ctx.accounts.token_b_vault.to_account_info(),
+                    token_a_program: ctx.accounts.token_a_program.to_account_info(),
+                    token_b_program: ctx.accounts.token_b_program.to_account_info(),
+                    token_a_mint: ctx.accounts.token_a_mint.to_account_info(),
+                    token_b_mint: ctx.accounts.token_b_mint.to_account_info(),
+                    position_nft_account: ctx.accounts.position_nft_account.to_account_info(),
+                    owner: ctx.accounts.fee_vault.to_account_info(),
+                    event_authority: ctx.accounts.dammv2_event_authority.to_account_info(),
+                    program: ctx.accounts.dammv2_program.to_account_info(),
+                },
+                &[signer_seeds],
+            ))?;
 
-    require!(
-        fee_vault
-            .token_vault
-            .eq(&ctx.accounts.token_b_account.key())
-            && fee_vault.token_mint.eq(&ctx.accounts.token_b_mint.key()),
-        FeeVaultError::InvalidFeeVault
-    );
-
-    // support fee vault type is pda account
-    require!(
-        fee_vault.fee_vault_type == 1,
-        FeeVaultError::InvalidFeeVault
-    );
-
-    let before_token_vault_balance = ctx.accounts.token_b_account.amount;
-
-    let signer_seeds = fee_vault_seeds!(
-        fee_vault.base,
-        fee_vault.token_mint,
-        fee_vault.fee_vault_bump
-    );
-
-    damm_v2::cpi::claim_position_fee(CpiContext::new_with_signer(
-        ctx.accounts.dammv2_program.to_account_info(),
-        damm_v2::cpi::accounts::ClaimPositionFee {
-            pool_authority: ctx.accounts.dammv2_pool_authority.to_account_info(),
-            pool: ctx.accounts.pool.to_account_info(),
-            position: ctx.accounts.position.to_account_info(),
-            token_a_account: ctx.accounts.token_a_account.to_account_info(),
-            token_b_account: ctx.accounts.token_b_account.to_account_info(),
-            token_a_vault: ctx.accounts.token_a_vault.to_account_info(),
-            token_b_vault: ctx.accounts.token_b_vault.to_account_info(),
-            token_a_program: ctx.accounts.token_a_program.to_account_info(),
-            token_b_program: ctx.accounts.token_b_program.to_account_info(),
-            token_a_mint: ctx.accounts.token_a_mint.to_account_info(),
-            token_b_mint: ctx.accounts.token_b_mint.to_account_info(),
-            position_nft_account: ctx.accounts.position_nft_account.to_account_info(),
-            owner: ctx.accounts.fee_vault.to_account_info(),
-            event_authority: ctx.accounts.dammv2_event_authority.to_account_info(),
-            program: ctx.accounts.dammv2_program.to_account_info(),
+            Ok(())
         },
-        &[signer_seeds],
-    ))?;
+    )?;
 
-    ctx.accounts.token_b_account.reload()?;
-
-    let after_token_vault_balance = ctx.accounts.token_b_account.amount;
-
-    let claimed_amount = after_token_vault_balance.safe_sub(before_token_vault_balance)?;
-
-    drop(fee_vault);
-
-    if claimed_amount > 0 {
-        let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
-        fee_vault.fund_fee(claimed_amount)?;
-
-        emit_cpi!(EvtFundFee {
-            funding_type: FundingType::ClaimDammV2,
-            fee_vault: ctx.accounts.fee_vault.key(),
-            funder: ctx.accounts.pool.key(),
-            funded_amount: claimed_amount,
-            fee_per_share: fee_vault.fee_per_share,
-        });
-    }
+    // emit_cpi!(EvtFundFee {
+    //     funding_type: FundingType::ClaimDammV2,
+    //     fee_vault: ctx.accounts.fee_vault.key(),
+    //     funder: ctx.accounts.pool.key(),
+    //     funded_amount: claimed_amount,
+    //     fee_per_share: fee_vault.fee_per_share,
+    // });
 
     Ok(())
 }

@@ -16,3 +16,5 @@ pub mod ix_funding_by_claim_dbc_creator_surplus;
 pub use ix_funding_by_claim_dbc_creator_surplus::*;
 pub mod ix_funding_by_claim_dbc_partner_surplus;
 pub use ix_funding_by_claim_dbc_partner_surplus::*;
+pub mod funding_fee;
+pub use funding_fee::*;
