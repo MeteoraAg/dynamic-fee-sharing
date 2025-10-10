@@ -2,9 +2,12 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
 use dynamic_bonding_curve::accounts::PoolConfig;
 
-use crate::{error::FeeVaultError, handle_funding_fee, state::FeeVault};
+use crate::{
+    error::FeeVaultError,
+    handle_funding_fee,
+    state::{FeeVault, FundingType},
+};
 
-#[event_cpi]
 #[derive(Accounts)]
 pub struct FundingByClaimDbcCreatorTradingFeeCtx<'info> {
     #[account(mut)]
@@ -70,6 +73,8 @@ pub fn handle_funding_by_claim_dbc_creator_trading_fee(
         &ctx.accounts.fee_vault,
         &mut ctx.accounts.token_b_account.clone(),
         ctx.accounts.quote_mint.key,
+        ctx.accounts.pool.key(),
+        FundingType::ClaimDbcCreatorTradingFee,
         |signer_seeds| {
             dynamic_bonding_curve::cpi::claim_creator_trading_fee(
                 CpiContext::new_with_signer(
@@ -97,14 +102,6 @@ pub fn handle_funding_by_claim_dbc_creator_trading_fee(
             Ok(())
         },
     )?;
-
-    // emit_cpi!(EvtFundFee {
-    //     funding_type: FundingType::ClaimDbcCreatorTradingFee,
-    //     fee_vault: ctx.accounts.fee_vault.key(),
-    //     funder: ctx.accounts.pool.key(),
-    //     funded_amount: claimed_amount,
-    //     fee_per_share: fee_vault.fee_per_share,
-    // });
 
     Ok(())
 }

@@ -2,9 +2,11 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
 use dynamic_bonding_curve::accounts::VirtualPool;
 
-use crate::{handle_funding_fee, state::FeeVault};
+use crate::{
+    handle_funding_fee,
+    state::{FeeVault, FundingType},
+};
 
-#[event_cpi]
 #[derive(Accounts)]
 pub struct FundingByClaimDbcCreatorSurplusCtx<'info> {
     #[account(mut)]
@@ -60,6 +62,8 @@ pub fn handle_funding_by_claim_dbc_creator_surplus(
         &ctx.accounts.fee_vault,
         &mut ctx.accounts.token_quote_account.clone(),
         ctx.accounts.quote_mint.key,
+        ctx.accounts.pool.key(),
+        FundingType::ClaimDbcCreatorSurplus,
         |signer_seeds| {
             dynamic_bonding_curve::cpi::creator_withdraw_surplus(CpiContext::new_with_signer(
                 ctx.accounts.dbc_program.to_account_info(),
@@ -80,14 +84,6 @@ pub fn handle_funding_by_claim_dbc_creator_surplus(
             Ok(())
         },
     )?;
-
-    // emit_cpi!(EvtFundFee {
-    //     funding_type: FundingType::ClaimDbcCreatorSurplus,
-    //     fee_vault: ctx.accounts.fee_vault.key(),
-    //     funder: ctx.accounts.pool.key(),
-    //     funded_amount: claimed_amount,
-    //     fee_per_share: fee_vault.fee_per_share,
-    // });
 
     Ok(())
 }

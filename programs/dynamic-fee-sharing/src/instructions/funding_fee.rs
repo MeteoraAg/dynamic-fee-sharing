@@ -1,12 +1,19 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
 
-use crate::{error::FeeVaultError, math::SafeMath, state::FeeVault};
+use crate::{
+    error::FeeVaultError,
+    event::EvtFundFee,
+    math::SafeMath,
+    state::{FeeVault, FundingType},
+};
 pub fn handle_funding_fee<'info, F: Fn(&[&[u8]; 4]) -> Result<()>>(
     signer: &Pubkey,
     fee_vault_account: &AccountLoader<'_, FeeVault>,
     token_b_account: &mut Box<InterfaceAccount<'info, TokenAccount>>,
     token_b_mint: &Pubkey,
+    funder: Pubkey,
+    funding_type: FundingType,
     op: F,
 ) -> Result<()> {
     let fee_vault = fee_vault_account.load()?;
@@ -48,7 +55,14 @@ pub fn handle_funding_fee<'info, F: Fn(&[&[u8]; 4]) -> Result<()>>(
 
         let mut fee_vault = fee_vault_account.load_mut()?;
         fee_vault.fund_fee(claimed_amount)?;
-        // TODO emit event
+
+        emit!(EvtFundFee {
+            funding_type,
+            fee_vault: fee_vault_account.key(),
+            funder,
+            funded_amount: claimed_amount,
+            fee_per_share: fee_vault.fee_per_share,
+        });
     }
 
     Ok(())

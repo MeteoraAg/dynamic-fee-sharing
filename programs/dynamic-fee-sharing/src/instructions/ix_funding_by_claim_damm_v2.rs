@@ -2,9 +2,12 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
 use damm_v2::accounts::Pool;
 
-use crate::{error::FeeVaultError, handle_funding_fee, state::FeeVault};
+use crate::{
+    error::FeeVaultError,
+    handle_funding_fee,
+    state::{FeeVault, FundingType},
+};
 
-#[event_cpi]
 #[derive(Accounts)]
 pub struct FundingByClaimDammv2FeeCtx<'info> {
     #[account(mut)]
@@ -75,6 +78,8 @@ pub fn handle_funding_by_claim_dammv2_fee(ctx: Context<FundingByClaimDammv2FeeCt
         &ctx.accounts.fee_vault,
         &mut ctx.accounts.token_b_account.clone(),
         ctx.accounts.token_b_mint.key,
+        ctx.accounts.pool.key(),
+        FundingType::ClaimDammV2,
         |signer_seeds| {
             damm_v2::cpi::claim_position_fee(CpiContext::new_with_signer(
                 ctx.accounts.dammv2_program.to_account_info(),
@@ -101,14 +106,6 @@ pub fn handle_funding_by_claim_dammv2_fee(ctx: Context<FundingByClaimDammv2FeeCt
             Ok(())
         },
     )?;
-
-    // emit_cpi!(EvtFundFee {
-    //     funding_type: FundingType::ClaimDammV2,
-    //     fee_vault: ctx.accounts.fee_vault.key(),
-    //     funder: ctx.accounts.pool.key(),
-    //     funded_amount: claimed_amount,
-    //     fee_per_share: fee_vault.fee_per_share,
-    // });
 
     Ok(())
 }
