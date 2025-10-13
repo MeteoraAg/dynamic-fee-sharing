@@ -48,6 +48,7 @@ export const RAW_AMOUNT = 1_000_000_000 * 10 ** TOKEN_DECIMALS;
 export const DYNAMIC_FEE_SHARING_PROGRAM_ID = new PublicKey(
   DynamicFeeSharingIDL.address
 );
+export const U64_MAX = new BN("18446744073709551615");
 
 export function createProgram(): DynamicFeeSharingProgram {
   const wallet = new Wallet(Keypair.generate());
