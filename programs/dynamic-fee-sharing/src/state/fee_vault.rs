@@ -8,17 +8,6 @@ use anchor_lang::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use static_assertions::const_assert_eq;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, PartialEq, Eq)]
-#[repr(u8)]
-pub enum FundingType {
-    Direct,
-    ClaimDammV2,
-    ClaimDbcPartnerTradingFee,
-    ClaimDbcCreatorTradingFee,
-    ClaimDbcPartnerSurplus,
-    ClaimDbcCreatorSurplus,
-}
-
 #[repr(u8)]
 #[derive(
     Clone,
@@ -129,5 +118,11 @@ impl FeeVault {
         user.fee_claimed = user.fee_claimed.safe_add(fee_being_claimed)?;
 
         Ok(fee_being_claimed)
+    }
+
+    pub fn is_share_holder(&self, signer: &Pubkey) -> bool {
+        self.users
+            .iter()
+            .any(|share_holder| share_holder.address.eq(signer))
     }
 }

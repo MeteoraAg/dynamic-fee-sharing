@@ -25,10 +25,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Add new field `fee_vault_type` in `FeeVault` to distinguish between PDA-derived and keypair-derived fee vaults.
-- Permissionless Funding Endpoints (supporting PDA account fee vaults):
-    - New endpoint `ix_funding_by_claim_damm_v2` allows funding by claiming Damm-V2 position fee.
-    - New endpoint `ix_funding_by_claim_dbc_creator_surplus` allows funding by claiming DBC creator surplus.
-    - New endpoint `ix_funding_by_claim_dbc_partner_surplus` allows funding by claiming DBC partner surplus.
-    - New endpoint `ix_funding_by_claim_dbc_creator_trading_fee` allows funding by claiming DBC creator trading fee.
-    - New endpoint `ix_funding_by_claim_dbc_partner_trading_fee` allows funding by claiming DBC partner trading fee.
+- Add new endpoint `fund_by_claiming_fee`, that allow share holder in fee vault to claim fees from whitelisted endpoints of DAMM-v2 or Dynamic Bonding Curve
 
