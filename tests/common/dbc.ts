@@ -457,8 +457,8 @@ export function buildDefaultCurve(): ConfigParameters {
     creatorTradingFeePercentage,
     tokenUpdateAuthority: 0,
     migrationFee: {
-      feePercentage: 0,
-      creatorFeePercentage: 0,
+      feePercentage: 50,
+      creatorFeePercentage: 50,
     },
     migratedPoolFee: {
       collectFeeMode: 0,

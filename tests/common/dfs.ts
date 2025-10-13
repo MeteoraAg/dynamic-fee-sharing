@@ -602,3 +602,72 @@ export async function withdrawDbcPartnerSurplus(
   const payload = Buffer.from(partnerWithdrawSurplusDisc)
   await fundByClaimingFee(svm, signer, feeVault, tokenVault, remainingAccounts, payload, DBC_PROGRAM_ID);
 }
+
+export async function withdrawMigrationFee(
+  svm: LiteSVM,
+  signer: Keypair,
+  feeVault: PublicKey,
+  tokenVault: PublicKey,
+  poolConfig: PublicKey,
+  virtualPool: PublicKey,
+  isPartner: number, //  0 as partner and 1 as creator
+) {
+  const virtualPoolState = getVirtualPoolState(svm, virtualPool);
+  const poolConfigState = getVirtualConfigState(svm, poolConfig);
+
+  const remainingAccounts = [
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: deriveDbcPoolAuthority(),
+    },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: poolConfig,
+    },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: virtualPool,
+    },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: tokenVault,
+    },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: virtualPoolState.quoteVault,
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: poolConfigState.quoteMint,
+    },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: feeVault,
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: TOKEN_PROGRAM_ID,
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: deriveDbcEventAuthority(),
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: DBC_PROGRAM_ID,
+    },
+  ]
+  const withdrawMigrationFeeDisc = DynamicBondingCurveIDL.instructions.find(instruction => instruction.name === "withdraw_migration_fee").discriminator;
+  const payload =  Buffer.concat([Buffer.from(withdrawMigrationFeeDisc), Buffer.from([isPartner])])
+  await fundByClaimingFee(svm, signer, feeVault, tokenVault, remainingAccounts, payload, DBC_PROGRAM_ID);
+}

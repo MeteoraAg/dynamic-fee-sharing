@@ -25,6 +25,7 @@ import {
   createFeeVaultPda,
   withdrawDbcCreatorSurplus,
   withdrawDbcPartnerSurplus,
+  withdrawMigrationFee,
 } from "./common/dfs";
 
 describe("Funding by claiming in DBC", () => {
@@ -270,6 +271,66 @@ describe("Funding by claiming in DBC", () => {
       tokenVault,
       virtualPoolConfig,
       virtualPool
+    );
+
+    const postTokenVaultBalance = getTokenBalance(svm, tokenVault);
+    vaultState = getFeeVault(svm, feeVault);
+
+    const postTotalFundedFee = vaultState.totalFundedFee;
+    const postFeePerShare = vaultState.feePerShare;
+
+    expect(postTotalFundedFee.sub(preTotalFundedFee).toString()).eq(
+      postTokenVaultBalance.sub(preTokenVaultBalance).toString()
+    );
+    expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
+  });
+
+  it("withdraw migration fee", async () => {
+    const { feeVault, tokenVault } = await createFeeVaultPda(
+      svm,
+      admin,
+      vaultOwner.publicKey,
+      quoteMint,
+      {
+        padding: [],
+        users: [
+          {
+            address: shareHolder.publicKey,
+            share: 100,
+          },
+          {
+            address: PublicKey.unique(),
+            share: 100,
+          },
+        ],
+      }
+    );
+
+    const { virtualPool, virtualPoolConfig } = await setupPool(
+      svm,
+      admin,
+      user,
+      poolCreator,
+      payer,
+      feeVault,
+      quoteMint
+    );
+
+    let vaultState = getFeeVault(svm, feeVault);
+
+    const preTotalFundedFee = vaultState.totalFundedFee;
+    const preFeePerShare = vaultState.feePerShare;
+
+    const preTokenVaultBalance = getTokenBalance(svm, tokenVault);
+
+    await withdrawMigrationFee(
+      svm,
+      shareHolder,
+      feeVault,
+      tokenVault,
+      virtualPoolConfig,
+      virtualPool,
+      0
     );
 
     const postTokenVaultBalance = getTokenBalance(svm, tokenVault);
