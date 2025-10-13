@@ -56,42 +56,40 @@ pub fn handle_fund_by_claiming_fee(
 
     let before_token_vault_balance = ctx.accounts.token_vault.amount;
 
-    {
-        let accounts: Vec<AccountMeta> = ctx
-            .remaining_accounts
-            .iter()
-            .map(|acc| {
-                let is_signer = acc.key == &ctx.accounts.fee_vault.key();
-                AccountMeta {
-                    pubkey: *acc.key,
-                    is_signer: is_signer,
-                    is_writable: acc.is_writable,
-                }
-            })
-            .collect();
+    let accounts: Vec<AccountMeta> = ctx
+        .remaining_accounts
+        .iter()
+        .map(|acc| {
+            let is_signer = acc.key == &ctx.accounts.fee_vault.key();
+            AccountMeta {
+                pubkey: *acc.key,
+                is_signer: is_signer,
+                is_writable: acc.is_writable,
+            }
+        })
+        .collect();
 
-        let account_infos: Vec<AccountInfo> = ctx
-            .remaining_accounts
-            .iter()
-            .map(|acc| AccountInfo { ..acc.clone() })
-            .collect();
-        // invoke instruction to amm
-        let base = fee_vault.base;
-        let token_mint = fee_vault.token_mint;
-        let fee_vault_bump = fee_vault.fee_vault_bump;
-        let signer_seeds = fee_vault_seeds!(base, token_mint, fee_vault_bump);
-        drop(fee_vault);
+    let account_infos: Vec<AccountInfo> = ctx
+        .remaining_accounts
+        .iter()
+        .map(|acc| AccountInfo { ..acc.clone() })
+        .collect();
+    // invoke instruction to amm
+    let base = fee_vault.base;
+    let token_mint = fee_vault.token_mint;
+    let fee_vault_bump = fee_vault.fee_vault_bump;
+    let signer_seeds = fee_vault_seeds!(base, token_mint, fee_vault_bump);
+    drop(fee_vault);
 
-        invoke_signed(
-            &Instruction {
-                program_id: ctx.accounts.source_program.key(),
-                accounts,
-                data: payload.clone(),
-            },
-            &account_infos,
-            &[signer_seeds],
-        )?;
-    }
+    invoke_signed(
+        &Instruction {
+            program_id: ctx.accounts.source_program.key(),
+            accounts,
+            data: payload.clone(),
+        },
+        &account_infos,
+        &[signer_seeds],
+    )?;
 
     ctx.accounts.token_vault.reload()?;
 

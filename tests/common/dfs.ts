@@ -64,7 +64,7 @@ export async function createFeeVaultPda(
   tx.recentBlockhash = svm.latestBlockhash();
   tx.sign(admin, baseKp);
 
-  sendTransactionOrExpectThrowError(svm, tx, false);
+  sendTransactionOrExpectThrowError(svm, tx);
 
   return { feeVault, tokenVault };
 }
@@ -88,7 +88,7 @@ async function fundByClaimingFee(svm: LiteSVM, signer: Keypair, feeVault: Public
   tx.recentBlockhash = svm.latestBlockhash();
   tx.sign(signer);
 
-  const result = sendTransactionOrExpectThrowError(svm, tx, true);
+  const result = sendTransactionOrExpectThrowError(svm, tx);
 
   return result
 }
@@ -668,6 +668,6 @@ export async function withdrawMigrationFee(
     },
   ]
   const withdrawMigrationFeeDisc = DynamicBondingCurveIDL.instructions.find(instruction => instruction.name === "withdraw_migration_fee").discriminator;
-  const payload =  Buffer.concat([Buffer.from(withdrawMigrationFeeDisc), Buffer.from([isPartner])])
+  const payload = Buffer.concat([Buffer.from(withdrawMigrationFeeDisc), Buffer.from([isPartner])])
   await fundByClaimingFee(svm, signer, feeVault, tokenVault, remainingAccounts, payload, DBC_PROGRAM_ID);
 }
