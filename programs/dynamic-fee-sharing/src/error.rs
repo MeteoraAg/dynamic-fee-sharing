@@ -29,9 +29,9 @@ pub enum FeeVaultError {
     #[msg("Invalid fee vault")]
     InvalidFeeVault,
 
-    #[msg("Invalid dammv2 pool")]
-    InvalidDammv2Pool,
+    #[msg("Invalid signer")]
+    InvalidSigner,
 
-    #[msg("Invalid dammv2 pool")]
-    InvalidDbcPool,
+    #[msg("Invalid action")]
+    InvalidAction,
 }

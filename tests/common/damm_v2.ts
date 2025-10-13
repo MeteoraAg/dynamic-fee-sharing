@@ -22,6 +22,8 @@ export const DAMM_V2_PROGRAM_ID = new PublicKey(CpAmmIDL.address);
 export type Pool = IdlAccounts<CpAmm>["pool"];
 export type Position = IdlAccounts<CpAmm>["position"];
 
+// export const ClaimFeeIx = CpAmmIDL.instructions[1].discriminator;
+
 export const MIN_SQRT_PRICE = new BN("4295048016");
 export const MAX_SQRT_PRICE = new BN("79226673521066979257578248091");
 const LIQUIDITY_DELTA = new BN("1844674407800459963300003758876517305");

@@ -37,32 +37,11 @@ pub mod dynamic_fee_sharing {
         instructions::handle_fund_fee(ctx, max_amount)
     }
 
-    pub fn funding_by_claim_dammv2_fee(ctx: Context<FundingByClaimDammv2FeeCtx>) -> Result<()> {
-        instructions::handle_funding_by_claim_dammv2_fee(ctx)
-    }
-
-    pub fn funding_by_claim_dbc_partner_trading_fee(
-        ctx: Context<FundingByClaimDbcTradingFeeCtx>,
+    pub fn fund_by_claiming_fee(
+        ctx: Context<FundByClaimingFeeCtx>,
+        payload: Vec<u8>,
     ) -> Result<()> {
-        instructions::handle_funding_by_claim_dbc_partner_trading_fee(ctx)
-    }
-
-    pub fn funding_by_claim_dbc_creator_trading_fee(
-        ctx: Context<FundingByClaimDbcCreatorTradingFeeCtx>,
-    ) -> Result<()> {
-        instructions::handle_funding_by_claim_dbc_creator_trading_fee(ctx)
-    }
-
-    pub fn funding_by_claim_dbc_creator_surplus(
-        ctx: Context<FundingByClaimDbcCreatorSurplusCtx>,
-    ) -> Result<()> {
-        instructions::handle_funding_by_claim_dbc_creator_surplus(ctx)
-    }
-
-    pub fn funding_by_claim_dbc_partner_surplus(
-        ctx: Context<FundingByClaimDbcPartnerSurplusCtx>,
-    ) -> Result<()> {
-        instructions::handle_funding_by_claim_dbc_partner_surplus(ctx)
+        instructions::handle_fund_by_claiming_fee(ctx, payload)
     }
 
     pub fn claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {

@@ -56,7 +56,7 @@ export function sendTransactionOrExpectThrowError(
   transaction: Transaction,
   logging = false,
   errorCode?: number
-): void {
+) {
   const result = svm.sendTransaction(transaction);
   if (logging) {
     if (result instanceof TransactionMetadata) {
@@ -70,6 +70,8 @@ export function sendTransactionOrExpectThrowError(
   } else {
     expect(result).instanceOf(TransactionMetadata);
   }
+
+  return result
 }
 
 export function generateUsers(svm: LiteSVM, numberOfUsers: number): Keypair[] {
