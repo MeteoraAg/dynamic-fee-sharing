@@ -1,11 +1,10 @@
 import { BN } from "bn.js";
-import { Connection, Keypair, PublicKey } from "@solana/web3.js";
-import { config, expect } from "chai";
+import { Keypair, PublicKey } from "@solana/web3.js";
+import { expect } from "chai";
 import { LiteSVM } from "litesvm";
 import { generateUsers, getTokenBalance, startSvm } from "./common/svm";
 import {
   createToken,
-  deriveFeeVaultAuthorityAddress,
   getFeeVault,
   mintToken,
 } from "./common";
@@ -22,13 +21,13 @@ import {
 } from "./common/dbc";
 import {
   claimDbcCreatorTradingFee,
-  claimDbcTradingFee,
+  claimDbcPartnerTradingFee,
   createFeeVaultPda,
   withdrawDbcCreatorSurplus,
   withdrawDbcPartnerSurplus,
 } from "./common/dfs";
 
-describe("Claim fee and withdraw dbc surplus", () => {
+describe("Funding by claiming in DBC", () => {
   let svm: LiteSVM;
   let admin: Keypair;
   let payer: Keypair;
@@ -89,7 +88,6 @@ describe("Claim fee and withdraw dbc surplus", () => {
     await claimDbcCreatorTradingFee(
       svm,
       shareHolder,
-      poolCreator,
       feeVault,
       tokenVault,
       virtualPoolConfig,
@@ -108,7 +106,7 @@ describe("Claim fee and withdraw dbc surplus", () => {
     expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
   });
 
-  it("claim dbc trading fee", async () => {
+  it("claim dbc partner trading fee", async () => {
     const { feeVault, tokenVault } = await createFeeVaultPda(
       svm,
       admin,
@@ -146,7 +144,7 @@ describe("Claim fee and withdraw dbc surplus", () => {
 
     const preTokenVaultBalance = getTokenBalance(svm, tokenVault);
 
-    await claimDbcTradingFee(
+    await claimDbcPartnerTradingFee(
       svm,
       shareHolder,
       payer,

@@ -35,9 +35,9 @@ pub fn handle_fund_by_claiming_fee(
     ctx: Context<FundByClaimingFeeCtx>,
     payload: Vec<u8>,
 ) -> Result<()> {
-    let disciminator = &payload[..8]; // first 8 bytes is discriminator
+    let discriminator = &payload[..8]; // first 8 bytes is discriminator
     require!(
-        is_support_action(ctx.accounts.source_program.key, disciminator),
+        is_support_action(ctx.accounts.source_program.key, discriminator),
         FeeVaultError::InvalidAction
     );
 
