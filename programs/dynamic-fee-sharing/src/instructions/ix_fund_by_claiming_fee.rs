@@ -22,10 +22,17 @@ pub struct FundByClaimingFeeCtx<'info> {
     pub source_program: UncheckedAccount<'info>,
 }
 
-pub fn is_support_action(source_program: &Pubkey, discriminator: &[u8]) -> bool {
-    for &(program, disc) in WHITELISTED_ACTIONS.iter() {
+pub fn is_support_action<'info>(
+    source_program: &Pubkey,
+    discriminator: &[u8],
+    token_vault: Pubkey,
+    remaining_accounts: &[AccountInfo<'info>],
+) -> bool {
+    for &(program, disc, token_vault_index) in WHITELISTED_ACTIONS.iter() {
         if program.eq(source_program) && disc.eq(discriminator) {
-            return true;
+            if let Some(token_vault_account) = remaining_accounts.get(token_vault_index) {
+                return token_vault.eq(token_vault_account.key);
+            }
         }
     }
     false
@@ -37,7 +44,12 @@ pub fn handle_fund_by_claiming_fee(
 ) -> Result<()> {
     let discriminator = &payload[..8]; // first 8 bytes is discriminator
     require!(
-        is_support_action(ctx.accounts.source_program.key, discriminator),
+        is_support_action(
+            ctx.accounts.source_program.key,
+            discriminator,
+            ctx.accounts.token_vault.key(),
+            ctx.remaining_accounts
+        ),
         FeeVaultError::InvalidAction
     );
 
