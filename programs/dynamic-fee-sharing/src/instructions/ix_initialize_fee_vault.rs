@@ -1,6 +1,7 @@
 use crate::constants::MAX_USER;
 use crate::error::FeeVaultError;
 use crate::event::EvtInitializeFeeVault;
+use crate::state::FeeVaultType;
 use crate::utils::token::{get_token_program_flags, is_supported_mint};
 use crate::{
     constants::seeds::{FEE_VAULT_AUTHORITY_PREFIX, TOKEN_VAULT_PREFIX},
@@ -104,6 +105,9 @@ pub fn handle_initialize_fee_vault(
         &ctx.accounts.fee_vault,
         ctx.accounts.owner.key,
         &ctx.accounts.token_vault.key(),
+        &Pubkey::default(),
+        0,
+        FeeVaultType::NonPdaAccount.into(),
     )?;
 
     emit_cpi!(EvtInitializeFeeVault {
@@ -123,6 +127,9 @@ pub fn create_fee_vault<'info>(
     fee_vault: &AccountLoader<'info, FeeVault>,
     owner: &Pubkey,
     token_vault: &Pubkey,
+    base: &Pubkey,
+    fee_vault_bump: u8,
+    fee_vault_type: u8,
 ) -> Result<()> {
     require!(is_supported_mint(&token_mint)?, FeeVaultError::InvalidMint);
 
@@ -134,6 +141,9 @@ pub fn create_fee_vault<'info>(
         get_token_program_flags(&token_mint).into(),
         &token_mint.key(),
         token_vault,
+        base,
+        fee_vault_bump,
+        fee_vault_type,
         &params.users,
     )?;
     Ok(())

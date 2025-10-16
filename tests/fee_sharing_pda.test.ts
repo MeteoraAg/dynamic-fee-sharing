@@ -196,7 +196,10 @@ async function fullFlow(
     expect(feeVaultState.owner.toString()).eq(vaultOwner.toString());
     expect(feeVaultState.tokenMint.toString()).eq(tokenMint.toString());
     expect(feeVaultState.tokenVault.toString()).eq(tokenVault.toString());
-    const totalShare = params.users.reduce((a, b) => a.add(new BN(b.share)), new BN(0));
+    const totalShare = params.users.reduce(
+      (a, b) => a.add(new BN(b.share)),
+      new BN(0)
+    );
     expect(feeVaultState.totalShare).eq(totalShare.toNumber());
     expect(feeVaultState.totalFundedFee.toNumber()).eq(0);
 

@@ -46,11 +46,11 @@ pub fn handle_fund_fee(ctx: Context<FundFeeCtx>, max_amount: u64) -> Result<()> 
     )?;
 
     emit_cpi!(EvtFundFee {
+        source_program: Pubkey::default(),
         fee_vault: ctx.accounts.fee_vault.key(),
-        funder: ctx.accounts.funder.key(),
-        fee_per_share: fee_vault.fee_per_share,
-        excluded_transfer_fee_amount,
-        max_amount
+        payload: vec![],
+        funded_amount: excluded_transfer_fee_amount,
+        fee_per_share: fee_vault.fee_per_share
     });
 
     Ok(())

@@ -13,7 +13,7 @@ import {
   getProgramErrorCodeHexString,
   InitializeFeeVaultParameters,
   mintToken,
-  TOKEN_DECIMALS
+  TOKEN_DECIMALS,
 } from "./common";
 import { TOKEN_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import { BN } from "bn.js";
@@ -190,7 +190,10 @@ async function fullFlow(
     expect(feeVaultState.owner.toString()).eq(vaultOwner.toString());
     expect(feeVaultState.tokenMint.toString()).eq(tokenMint.toString());
     expect(feeVaultState.tokenVault.toString()).eq(tokenVault.toString());
-    const totalShare = params.users.reduce((a, b) => a.add(new BN(b.share)), new BN(0));
+    const totalShare = params.users.reduce(
+      (a, b) => a.add(new BN(b.share)),
+      new BN(0)
+    );
     expect(feeVaultState.totalShare).eq(totalShare.toNumber());
     expect(feeVaultState.totalFundedFee.toNumber()).eq(0);
 

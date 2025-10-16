@@ -7,6 +7,7 @@ pub mod constants;
 pub mod error;
 pub mod instructions;
 pub use instructions::*;
+pub mod const_pda;
 pub mod event;
 pub mod math;
 pub mod state;
@@ -34,6 +35,13 @@ pub mod dynamic_fee_sharing {
 
     pub fn fund_fee(ctx: Context<FundFeeCtx>, max_amount: u64) -> Result<()> {
         instructions::handle_fund_fee(ctx, max_amount)
+    }
+
+    pub fn fund_by_claiming_fee(
+        ctx: Context<FundByClaimingFeeCtx>,
+        payload: Vec<u8>,
+    ) -> Result<()> {
+        instructions::handle_fund_by_claiming_fee(ctx, payload)
     }
 
     pub fn claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {

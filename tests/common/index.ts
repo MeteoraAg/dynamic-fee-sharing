@@ -16,10 +16,12 @@ import DynamicFeeSharingIDL from "../../target/idl/dynamic_fee_sharing.json";
 import { DynamicFeeSharing } from "../../target/types/dynamic_fee_sharing";
 import {
   createAssociatedTokenAccountInstruction,
+  createCloseAccountInstruction,
   createInitializeMint2Instruction,
   createMintToInstruction,
   getAssociatedTokenAddressSync,
   MINT_SIZE,
+  NATIVE_MINT,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import {
@@ -30,11 +32,8 @@ import {
   PublicKey,
   SystemProgram,
   Transaction,
+  TransactionInstruction,
 } from "@solana/web3.js";
-import {
-  TransactionErrorFieldless,
-  TransactionErrorInstructionError,
-} from "litesvm/dist/internal";
 
 export type InitializeFeeVaultParameters =
   IdlTypes<DynamicFeeSharing>["initializeFeeVaultParameters"];
@@ -46,6 +45,10 @@ export type DynamicFeeSharingProgram = Program<DynamicFeeSharing>;
 
 export const TOKEN_DECIMALS = 9;
 export const RAW_AMOUNT = 1_000_000_000 * 10 ** TOKEN_DECIMALS;
+export const DYNAMIC_FEE_SHARING_PROGRAM_ID = new PublicKey(
+  DynamicFeeSharingIDL.address
+);
+export const U64_MAX = new BN("18446744073709551615");
 
 export function createProgram(): DynamicFeeSharingProgram {
   const wallet = new Wallet(Keypair.generate());
@@ -134,7 +137,8 @@ export function mintToken(
   payer: Keypair,
   mint: PublicKey,
   mintAuthority: Keypair,
-  toWallet: PublicKey
+  toWallet: PublicKey,
+  amount?: number
 ) {
   const destination = getOrCreateAtA(svm, payer, mint, toWallet);
 
@@ -142,7 +146,7 @@ export function mintToken(
     mint,
     destination,
     mintAuthority.publicKey,
-    RAW_AMOUNT
+    amount ?? RAW_AMOUNT
   );
 
   let transaction = new Transaction();
@@ -181,6 +185,53 @@ export function getOrCreateAtA(
 
   return ataKey;
 }
+
+export const wrapSOLInstruction = (
+  from: PublicKey,
+  to: PublicKey,
+  amount: bigint
+): TransactionInstruction[] => {
+  return [
+    SystemProgram.transfer({
+      fromPubkey: from,
+      toPubkey: to,
+      lamports: amount,
+    }),
+    new TransactionInstruction({
+      keys: [
+        {
+          pubkey: to,
+          isSigner: false,
+          isWritable: true,
+        },
+      ],
+      data: Buffer.from(new Uint8Array([17])),
+      programId: TOKEN_PROGRAM_ID,
+    }),
+  ];
+};
+
+export const unwrapSOLInstruction = (
+  owner: PublicKey,
+  allowOwnerOffCurve = true
+) => {
+  const wSolATAAccount = getAssociatedTokenAddressSync(
+    NATIVE_MINT,
+    owner,
+    allowOwnerOffCurve
+  );
+  if (wSolATAAccount) {
+    const closedWrappedSolInstruction = createCloseAccountInstruction(
+      wSolATAAccount,
+      owner,
+      owner,
+      [],
+      TOKEN_PROGRAM_ID
+    );
+    return closedWrappedSolInstruction;
+  }
+  return null;
+};
 
 export function generateUsers(svm: LiteSVM, numberOfUsers: number) {
   const res = [];
