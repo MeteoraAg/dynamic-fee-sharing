@@ -27,3 +27,12 @@ pub struct EvtClaimFee {
     pub index: u8,
     pub claimed_fee: u64,
 }
+
+#[event]
+pub struct EvtCloseFeeVault {
+    pub fee_vault: Pubkey,
+    pub admin: Pubkey,
+    pub fee_receiver: Pubkey,
+    pub rent_receiver: Pubkey,
+    pub remaining_fee: u64,
+}

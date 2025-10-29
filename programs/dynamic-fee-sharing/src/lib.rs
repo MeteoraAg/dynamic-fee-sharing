@@ -33,6 +33,13 @@ pub mod dynamic_fee_sharing {
         instructions::handle_initialize_fee_vault_pda(ctx, &params)
     }
 
+    pub fn initialize_permission_fee_vault(
+        ctx: Context<InitializePermissionFeeVaultCtx>,
+        params: InitializeFeeVaultParameters,
+    ) -> Result<()> {
+        instructions::handle_initialize_permission_fee_vault(ctx, &params)
+    }
+
     pub fn fund_fee(ctx: Context<FundFeeCtx>, max_amount: u64) -> Result<()> {
         instructions::handle_fund_fee(ctx, max_amount)
     }
@@ -46,5 +53,9 @@ pub mod dynamic_fee_sharing {
 
     pub fn claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {
         instructions::handle_claim_fee(ctx, index)
+    }
+
+    pub fn close_permission_fee_vault(ctx: Context<ClosePermissionFeeVaultCtx>) -> Result<()> {
+        instructions::handle_close_permission_fee_vault(ctx)
     }
 }

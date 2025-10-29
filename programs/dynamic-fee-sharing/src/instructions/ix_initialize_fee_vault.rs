@@ -108,6 +108,7 @@ pub fn handle_initialize_fee_vault(
         &Pubkey::default(),
         0,
         FeeVaultType::NonPdaAccount.into(),
+        &Pubkey::default(),
     )?;
 
     emit_cpi!(EvtInitializeFeeVault {
@@ -130,6 +131,7 @@ pub fn create_fee_vault<'info>(
     base: &Pubkey,
     fee_vault_bump: u8,
     fee_vault_type: u8,
+    admin: &Pubkey,
 ) -> Result<()> {
     require!(is_supported_mint(&token_mint)?, FeeVaultError::InvalidMint);
 
@@ -145,6 +147,7 @@ pub fn create_fee_vault<'info>(
         fee_vault_bump,
         fee_vault_type,
         &params.users,
+        admin,
     )?;
     Ok(())
 }

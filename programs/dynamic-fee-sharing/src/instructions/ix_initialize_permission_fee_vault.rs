@@ -11,7 +11,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct InitializeFeeVaultPdaCtx<'info> {
+pub struct InitializePermissionFeeVaultCtx<'info> {
     #[account(
         init,
         seeds = [
@@ -56,6 +56,9 @@ pub struct InitializeFeeVaultPdaCtx<'info> {
     /// CHECK: owner
     pub owner: UncheckedAccount<'info>,
 
+    /// CHECK: admin of fee vault
+    pub admin: UncheckedAccount<'info>,
+
     pub base: Signer<'info>,
 
     #[account(mut)]
@@ -67,8 +70,8 @@ pub struct InitializeFeeVaultPdaCtx<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handle_initialize_fee_vault_pda(
-    ctx: Context<InitializeFeeVaultPdaCtx>,
+pub fn handle_initialize_permission_fee_vault(
+    ctx: Context<InitializePermissionFeeVaultCtx>,
     params: &InitializeFeeVaultParameters,
 ) -> Result<()> {
     create_fee_vault(
@@ -80,7 +83,7 @@ pub fn handle_initialize_fee_vault_pda(
         &ctx.accounts.base.key,
         ctx.bumps.fee_vault,
         FeeVaultType::PdaAccount.into(),
-        &Pubkey::default(),
+        ctx.accounts.admin.key,
     )?;
 
     emit_cpi!(EvtInitializeFeeVault {

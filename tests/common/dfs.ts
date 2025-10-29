@@ -6,6 +6,7 @@ import {
   deriveFeeVaultAuthorityAddress,
   deriveFeeVaultPdaAddress,
   deriveTokenVaultAddress,
+  getFeeVault,
   getOrCreateAtA,
   InitializeFeeVaultParameters,
   U64_MAX,
@@ -69,7 +70,86 @@ export async function createFeeVaultPda(
   return { feeVault, tokenVault };
 }
 
-async function fundByClaimingFee(svm: LiteSVM, signer: Keypair, feeVault: PublicKey, tokenVault: PublicKey, remainingAccounts: AccountMeta[], payload: Buffer, sourceProgram: PublicKey) {
+export async function createPermissionFeeVault(
+  svm: LiteSVM,
+  admin: Keypair,
+  vaultOwner: PublicKey,
+  tokenMint: PublicKey,
+  params: InitializeFeeVaultParameters
+): Promise<{
+  feeVault: PublicKey;
+  tokenVault: PublicKey;
+}> {
+  const program = createProgram();
+  const baseKp = Keypair.generate();
+  const feeVault = deriveFeeVaultPdaAddress(baseKp.publicKey, tokenMint);
+  const tokenVault = deriveTokenVaultAddress(feeVault);
+  const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
+  const tx = await program.methods
+    .initializePermissionFeeVault(params)
+    .accountsPartial({
+      feeVault,
+      base: baseKp.publicKey,
+      feeVaultAuthority,
+      tokenVault,
+      tokenMint,
+      owner: vaultOwner,
+      admin: admin.publicKey,
+      payer: admin.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .transaction();
+
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(admin, baseKp);
+
+  sendTransactionOrExpectThrowError(svm, tx);
+
+  return { feeVault, tokenVault };
+}
+
+export async function closePermissionFeeVault(
+  svm: LiteSVM,
+  admin: Keypair,
+  feeVault: PublicKey
+) {
+  const program = createProgram();
+  const feeVaultState = getFeeVault(svm, feeVault);
+  const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
+  const feeReceiver = getOrCreateAtA(
+    svm,
+    admin,
+    feeVaultState.tokenMint,
+    admin.publicKey
+  );
+  const tx = await program.methods
+    .closePermissionFeeVault()
+    .accountsPartial({
+      feeVault,
+      feeVaultAuthority,
+      tokenMint: feeVaultState.tokenMint,
+      tokenVault: feeVaultState.tokenVault,
+      rentReceiver: admin.publicKey,
+      feeReceiver,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .transaction();
+
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(admin);
+
+  sendTransactionOrExpectThrowError(svm, tx);
+}
+
+async function fundByClaimingFee(
+  svm: LiteSVM,
+  signer: Keypair,
+  feeVault: PublicKey,
+  tokenVault: PublicKey,
+  remainingAccounts: AccountMeta[],
+  payload: Buffer,
+  sourceProgram: PublicKey
+) {
   const program = createProgram();
 
   const tx = await program.methods
@@ -78,11 +158,9 @@ async function fundByClaimingFee(svm: LiteSVM, signer: Keypair, feeVault: Public
       feeVault,
       tokenVault,
       signer: signer.publicKey,
-      sourceProgram
+      sourceProgram,
     })
-    .remainingAccounts(
-      remainingAccounts
-    )
+    .remainingAccounts(remainingAccounts)
     .transaction();
 
   tx.recentBlockhash = svm.latestBlockhash();
@@ -90,7 +168,7 @@ async function fundByClaimingFee(svm: LiteSVM, signer: Keypair, feeVault: Public
 
   const result = sendTransactionOrExpectThrowError(svm, tx);
 
-  return result
+  return result;
 }
 
 export async function claimDammV2Fee(
@@ -101,9 +179,8 @@ export async function claimDammV2Fee(
   tokenVault: PublicKey,
   dammv2Pool: PublicKey,
   position: PublicKey,
-  positionNftAccount: PublicKey,
+  positionNftAccount: PublicKey
 ) {
-
   const dammV2PoolState = getDammV2PoolState(svm, dammv2Pool);
 
   const tokenAAccount = getAssociatedTokenAddressSync(
@@ -192,11 +269,20 @@ export async function claimDammV2Fee(
     },
   ];
 
-  const claimPositionFeeDisc = CpAmmIDL.instructions.find(instruction => instruction.name === "claim_position_fee").discriminator;
-  const payload = Buffer.from(claimPositionFeeDisc)
+  const claimPositionFeeDisc = CpAmmIDL.instructions.find(
+    (instruction) => instruction.name === "claim_position_fee"
+  ).discriminator;
+  const payload = Buffer.from(claimPositionFeeDisc);
 
-  await fundByClaimingFee(svm, signer, feeVault, tokenVault, remainingAccounts, payload, DAMM_V2_PROGRAM_ID)
-
+  await fundByClaimingFee(
+    svm,
+    signer,
+    feeVault,
+    tokenVault,
+    remainingAccounts,
+    payload,
+    DAMM_V2_PROGRAM_ID
+  );
 }
 
 export async function claimDammV2Reward(
@@ -208,9 +294,8 @@ export async function claimDammV2Reward(
   dammv2Pool: PublicKey,
   position: PublicKey,
   positionNftAccount: PublicKey,
-  rewardIndex: number,
+  rewardIndex: number
 ) {
-
   const dammV2PoolState = getDammV2PoolState(svm, dammv2Pool);
 
   const remainingAccounts = [
@@ -257,7 +342,9 @@ export async function claimDammV2Reward(
     {
       isSigner: false,
       isWritable: false,
-      pubkey: getProgramFromFlagDammV2(dammV2PoolState.rewardInfos[rewardIndex].rewardTokenFlag),
+      pubkey: getProgramFromFlagDammV2(
+        dammV2PoolState.rewardInfos[rewardIndex].rewardTokenFlag
+      ),
     },
     {
       isSigner: false,
@@ -271,10 +358,23 @@ export async function claimDammV2Reward(
     },
   ];
 
-  const claimDammV2RewardDisc = CpAmmIDL.instructions.find(instruction => instruction.name === "claim_reward").discriminator;
-  const payload = Buffer.concat([Buffer.from(claimDammV2RewardDisc), Buffer.from([rewardIndex]), Buffer.from([1])])
-  await fundByClaimingFee(svm, signer, feeVault, tokenVault, remainingAccounts, payload, DAMM_V2_PROGRAM_ID)
-
+  const claimDammV2RewardDisc = CpAmmIDL.instructions.find(
+    (instruction) => instruction.name === "claim_reward"
+  ).discriminator;
+  const payload = Buffer.concat([
+    Buffer.from(claimDammV2RewardDisc),
+    Buffer.from([rewardIndex]),
+    Buffer.from([1]),
+  ]);
+  await fundByClaimingFee(
+    svm,
+    signer,
+    feeVault,
+    tokenVault,
+    remainingAccounts,
+    payload,
+    DAMM_V2_PROGRAM_ID
+  );
 }
 
 export async function claimDbcCreatorTradingFee(
@@ -362,10 +462,25 @@ export async function claimDbcCreatorTradingFee(
       isWritable: false,
       pubkey: DBC_PROGRAM_ID,
     },
-  ]
-  const claimDbcCreatorTradingFeeDisc = DynamicBondingCurveIDL.instructions.find(instruction => instruction.name === "claim_creator_trading_fee").discriminator;
-  const payload = Buffer.concat([Buffer.from(claimDbcCreatorTradingFeeDisc), U64_MAX.toBuffer(), U64_MAX.toBuffer()])
-  await fundByClaimingFee(svm, signer, feeVault, tokenVault, remainingAccounts, payload, DBC_PROGRAM_ID);
+  ];
+  const claimDbcCreatorTradingFeeDisc =
+    DynamicBondingCurveIDL.instructions.find(
+      (instruction) => instruction.name === "claim_creator_trading_fee"
+    ).discriminator;
+  const payload = Buffer.concat([
+    Buffer.from(claimDbcCreatorTradingFeeDisc),
+    U64_MAX.toBuffer(),
+    U64_MAX.toBuffer(),
+  ]);
+  await fundByClaimingFee(
+    svm,
+    signer,
+    feeVault,
+    tokenVault,
+    remainingAccounts,
+    payload,
+    DBC_PROGRAM_ID
+  );
 }
 
 export async function claimDbcPartnerTradingFee(
@@ -461,10 +576,25 @@ export async function claimDbcPartnerTradingFee(
       isWritable: false,
       pubkey: DBC_PROGRAM_ID,
     },
-  ]
-  const claimDbcPartnerTradingFeeDisc = DynamicBondingCurveIDL.instructions.find(instruction => instruction.name === "claim_trading_fee").discriminator;
-  const payload = Buffer.concat([Buffer.from(claimDbcPartnerTradingFeeDisc), U64_MAX.toBuffer(), U64_MAX.toBuffer()])
-  await fundByClaimingFee(svm, signer, feeVault, tokenVault, remainingAccounts, payload, DBC_PROGRAM_ID);
+  ];
+  const claimDbcPartnerTradingFeeDisc =
+    DynamicBondingCurveIDL.instructions.find(
+      (instruction) => instruction.name === "claim_trading_fee"
+    ).discriminator;
+  const payload = Buffer.concat([
+    Buffer.from(claimDbcPartnerTradingFeeDisc),
+    U64_MAX.toBuffer(),
+    U64_MAX.toBuffer(),
+  ]);
+  await fundByClaimingFee(
+    svm,
+    signer,
+    feeVault,
+    tokenVault,
+    remainingAccounts,
+    payload,
+    DBC_PROGRAM_ID
+  );
 }
 
 export async function withdrawDbcCreatorSurplus(
@@ -529,10 +659,20 @@ export async function withdrawDbcCreatorSurplus(
       isWritable: false,
       pubkey: DBC_PROGRAM_ID,
     },
-  ]
-  const creatorWithdrawSurplusDisc = DynamicBondingCurveIDL.instructions.find(instruction => instruction.name === "creator_withdraw_surplus").discriminator;
-  const payload = Buffer.from(creatorWithdrawSurplusDisc)
-  await fundByClaimingFee(svm, signer, feeVault, tokenVault, remainingAccounts, payload, DBC_PROGRAM_ID);
+  ];
+  const creatorWithdrawSurplusDisc = DynamicBondingCurveIDL.instructions.find(
+    (instruction) => instruction.name === "creator_withdraw_surplus"
+  ).discriminator;
+  const payload = Buffer.from(creatorWithdrawSurplusDisc);
+  await fundByClaimingFee(
+    svm,
+    signer,
+    feeVault,
+    tokenVault,
+    remainingAccounts,
+    payload,
+    DBC_PROGRAM_ID
+  );
 }
 
 export async function withdrawDbcPartnerSurplus(
@@ -597,10 +737,20 @@ export async function withdrawDbcPartnerSurplus(
       isWritable: false,
       pubkey: DBC_PROGRAM_ID,
     },
-  ]
-  const partnerWithdrawSurplusDisc = DynamicBondingCurveIDL.instructions.find(instruction => instruction.name === "partner_withdraw_surplus").discriminator;
-  const payload = Buffer.from(partnerWithdrawSurplusDisc)
-  await fundByClaimingFee(svm, signer, feeVault, tokenVault, remainingAccounts, payload, DBC_PROGRAM_ID);
+  ];
+  const partnerWithdrawSurplusDisc = DynamicBondingCurveIDL.instructions.find(
+    (instruction) => instruction.name === "partner_withdraw_surplus"
+  ).discriminator;
+  const payload = Buffer.from(partnerWithdrawSurplusDisc);
+  await fundByClaimingFee(
+    svm,
+    signer,
+    feeVault,
+    tokenVault,
+    remainingAccounts,
+    payload,
+    DBC_PROGRAM_ID
+  );
 }
 
 export async function withdrawMigrationFee(
@@ -610,7 +760,7 @@ export async function withdrawMigrationFee(
   tokenVault: PublicKey,
   poolConfig: PublicKey,
   virtualPool: PublicKey,
-  isPartner: number, //  0 as partner and 1 as creator
+  isPartner: number //  0 as partner and 1 as creator
 ) {
   const virtualPoolState = getVirtualPoolState(svm, virtualPool);
   const poolConfigState = getVirtualConfigState(svm, poolConfig);
@@ -666,8 +816,21 @@ export async function withdrawMigrationFee(
       isWritable: false,
       pubkey: DBC_PROGRAM_ID,
     },
-  ]
-  const withdrawMigrationFeeDisc = DynamicBondingCurveIDL.instructions.find(instruction => instruction.name === "withdraw_migration_fee").discriminator;
-  const payload = Buffer.concat([Buffer.from(withdrawMigrationFeeDisc), Buffer.from([isPartner])])
-  await fundByClaimingFee(svm, signer, feeVault, tokenVault, remainingAccounts, payload, DBC_PROGRAM_ID);
+  ];
+  const withdrawMigrationFeeDisc = DynamicBondingCurveIDL.instructions.find(
+    (instruction) => instruction.name === "withdraw_migration_fee"
+  ).discriminator;
+  const payload = Buffer.concat([
+    Buffer.from(withdrawMigrationFeeDisc),
+    Buffer.from([isPartner]),
+  ]);
+  await fundByClaimingFee(
+    svm,
+    signer,
+    feeVault,
+    tokenVault,
+    remainingAccounts,
+    payload,
+    DBC_PROGRAM_ID
+  );
 }

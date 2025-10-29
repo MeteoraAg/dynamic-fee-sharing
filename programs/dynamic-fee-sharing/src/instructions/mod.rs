@@ -8,3 +8,7 @@ pub mod ix_initialize_fee_vault_pda;
 pub use ix_initialize_fee_vault_pda::*;
 pub mod ix_fund_by_claiming_fee;
 pub use ix_fund_by_claiming_fee::*;
+pub mod ix_initialize_permission_fee_vault;
+pub use ix_initialize_permission_fee_vault::*;
+pub mod ix_close_permission_fee_vault;
+pub use ix_close_permission_fee_vault::*;
