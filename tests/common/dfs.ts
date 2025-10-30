@@ -32,6 +32,7 @@ import {
   getVirtualConfigState,
   getVirtualPoolState,
 } from "./dbc";
+import BN from "bn.js";
 
 export async function createFeeVaultPda(
   svm: LiteSVM,
@@ -122,6 +123,7 @@ export async function closePermissionFeeVault(
     feeVaultState.tokenMint,
     admin.publicKey
   );
+
   const tx = await program.methods
     .closePermissionFeeVault()
     .accountsPartial({
@@ -131,6 +133,7 @@ export async function closePermissionFeeVault(
       tokenVault: feeVaultState.tokenVault,
       rentReceiver: admin.publicKey,
       feeReceiver,
+      admin: admin.publicKey,
       tokenProgram: TOKEN_PROGRAM_ID,
     })
     .transaction();
@@ -138,7 +141,43 @@ export async function closePermissionFeeVault(
   tx.recentBlockhash = svm.latestBlockhash();
   tx.sign(admin);
 
-  sendTransactionOrExpectThrowError(svm, tx);
+  return sendTransactionOrExpectThrowError(svm, tx, true);
+}
+
+export async function fundFee(
+  svm: LiteSVM,
+  funder: Keypair,
+  feeVault: PublicKey,
+  fundAmount: BN
+) {
+  const program = createProgram();
+  const feeVaultState = getFeeVault(svm, feeVault);
+
+  const tokenProgram = svm.getAccount(feeVaultState.tokenMint).owner;
+
+  const fundTokenVault = getAssociatedTokenAddressSync(
+    feeVaultState.tokenMint,
+    funder.publicKey,
+    false,
+    tokenProgram
+  );
+
+  const fundFeeTx = await program.methods
+    .fundFee(fundAmount)
+    .accountsPartial({
+      feeVault,
+      tokenVault: feeVaultState.tokenVault,
+      tokenMint: feeVaultState.tokenMint,
+      fundTokenVault,
+      funder: funder.publicKey,
+      tokenProgram,
+    })
+    .transaction();
+
+  fundFeeTx.recentBlockhash = svm.latestBlockhash();
+  fundFeeTx.sign(funder);
+
+  svm.sendTransaction(fundFeeTx);
 }
 
 async function fundByClaimingFee(

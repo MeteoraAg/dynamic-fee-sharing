@@ -71,7 +71,7 @@ export function sendTransactionOrExpectThrowError(
     expect(result).instanceOf(TransactionMetadata);
   }
 
-  return result
+  return result;
 }
 
 export function generateUsers(svm: LiteSVM, numberOfUsers: number): Keypair[] {
@@ -112,5 +112,7 @@ export function warpToTimestamp(svm: LiteSVM, timestamp: BN) {
 
 export function getTokenBalance(svm: LiteSVM, ataAccount: PublicKey): BN {
   const account = svm.getAccount(ataAccount);
-  return new BN(AccountLayout.decode(account.data).amount.toString());
+  return account
+    ? new BN(AccountLayout.decode(account.data).amount.toString())
+    : new BN(0);
 }
