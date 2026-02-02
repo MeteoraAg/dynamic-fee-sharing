@@ -7,6 +7,7 @@ import {
   deriveTokenVaultAddress,
   DynamicFeeSharingProgram,
   expectThrowsErrorCode,
+  fundFee,
   generateUsers,
   getFeeVault,
   getOrCreateAtA,
@@ -14,6 +15,7 @@ import {
   InitializeFeeVaultParameters,
   mintToken,
   TOKEN_DECIMALS,
+  updateUserShare,
 } from "./common";
 import { BN } from "bn.js";
 import {
@@ -24,6 +26,8 @@ import {
 import { expect } from "chai";
 
 import DynamicFeeSharingIDL from "../target/idl/dynamic_fee_sharing.json";
+import { getTokenBalance } from "./common/svm";
+import { createOperatorAccount, OperatorPermission } from "./common/operator";
 
 describe("Fee vault sharing", () => {
   let program: DynamicFeeSharingProgram;
@@ -145,7 +149,7 @@ describe("Fee vault sharing", () => {
       admin,
       funder,
       generatedUser,
-      vaultOwner.publicKey,
+      vaultOwner,
       tokenMint,
       params
     );
@@ -157,7 +161,7 @@ async function fullFlow(
   admin: Keypair,
   funder: Keypair,
   users: Keypair[],
-  vaultOwner: PublicKey,
+  vaultOwner: Keypair,
   tokenMint: PublicKey,
   params: InitializeFeeVaultParameters
 ) {
@@ -174,7 +178,7 @@ async function fullFlow(
       feeVaultAuthority,
       tokenVault,
       tokenMint,
-      owner: vaultOwner,
+      owner: vaultOwner.publicKey,
       payer: admin.publicKey,
       tokenProgram: TOKEN_PROGRAM_ID,
     })
@@ -187,7 +191,7 @@ async function fullFlow(
 
   if (sendRes instanceof TransactionMetadata) {
     const feeVaultState = getFeeVault(svm, feeVault.publicKey);
-    expect(feeVaultState.owner.toString()).eq(vaultOwner.toString());
+    expect(feeVaultState.owner.toString()).eq(vaultOwner.publicKey.toString());
     expect(feeVaultState.tokenMint.toString()).eq(tokenMint.toString());
     expect(feeVaultState.tokenVault.toString()).eq(tokenVault.toString());
     const totalShare = params.users.reduce(
@@ -205,41 +209,26 @@ async function fullFlow(
     console.log(sendRes.meta().logs());
   }
 
+  console.log("create vault operator account");
+  const whitelistedUser = users[0];
+  await createOperatorAccount({
+    svm,
+    program,
+    feeVault: feeVault.publicKey,
+    whitelistedUser: whitelistedUser.publicKey,
+    vaultOwner,
+    permissions: [OperatorPermission.UpdateUserShare],
+  });
+
   console.log("fund fee");
-
-  const fundTokenVault = getAssociatedTokenAddressSync(
+  await fundFee({
+    svm,
+    program,
+    funder,
+    fundAmount: new BN(100_000 * 10 ** TOKEN_DECIMALS),
+    feeVault: feeVault.publicKey,
     tokenMint,
-    funder.publicKey
-  );
-  const fundAmount = new BN(100_000 * 10 ** TOKEN_DECIMALS);
-  const fundFeeTx = await program.methods
-    .fundFee(fundAmount)
-    .accountsPartial({
-      feeVault: feeVault.publicKey,
-      tokenVault,
-      tokenMint,
-      fundTokenVault,
-      funder: funder.publicKey,
-      tokenProgram: TOKEN_PROGRAM_ID,
-    })
-    .transaction();
-
-  fundFeeTx.recentBlockhash = svm.latestBlockhash();
-  fundFeeTx.sign(funder);
-
-  const fundFeeRes = svm.sendTransaction(fundFeeTx);
-
-  if (fundFeeRes instanceof TransactionMetadata) {
-    const feeVaultState = getFeeVault(svm, feeVault.publicKey);
-    const account = svm.getAccount(tokenVault);
-    const tokenVaultBalance = AccountLayout.decode(
-      account.data
-    ).amount.toString();
-    expect(tokenVaultBalance).eq(fundAmount.toString());
-    expect(feeVaultState.totalFundedFee.toString()).eq(fundAmount.toString());
-  } else {
-    console.log(fundFeeRes.meta().logs());
-  }
+  });
 
   console.log("User claim fee");
 
@@ -276,4 +265,106 @@ async function fullFlow(
       console.log(claimFeeRes.meta().logs());
     }
   }
+
+  console.log("fund fee before share update");
+  svm.expireBlockhash();
+  await fundFee({
+    svm,
+    program,
+    funder,
+    fundAmount: new BN(100_000 * 10 ** TOKEN_DECIMALS),
+    feeVault: feeVault.publicKey,
+    tokenMint,
+  });
+
+  console.log("update user share");
+  updateUserShare({
+    svm,
+    program,
+    feeVault: feeVault.publicKey,
+    whitelistedUser,
+    userIndex: 0,
+    share: 2000,
+  });
+
+  console.log("user claim fee that was funded before share update");
+  const tokenBalanceDeltasBefore = [];
+  for (let i = 0; i < users.length; i++) {
+    const user = users[i];
+    const userTokenVault = getOrCreateAtA(svm, user, tokenMint, user.publicKey);
+    const beforeUserBalance = getTokenBalance(svm, userTokenVault);
+    const claimFeeTx = await program.methods
+      .claimFee(i)
+      .accountsPartial({
+        feeVault: feeVault.publicKey,
+        tokenMint,
+        tokenVault,
+        userTokenVault,
+        user: user.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .transaction();
+
+    claimFeeTx.recentBlockhash = svm.latestBlockhash();
+    claimFeeTx.sign(user);
+
+    const claimFeeRes = svm.sendTransaction(claimFeeTx);
+    expect(claimFeeRes instanceof TransactionMetadata).to.be.true;
+    const afterUserBalance = getTokenBalance(svm, userTokenVault);
+    tokenBalanceDeltasBefore.push(afterUserBalance.sub(beforeUserBalance));
+  }
+
+  // all users should have the same token balance delta since the fee was funded before share was updated
+  expect(
+    tokenBalanceDeltasBefore.every(
+      (delta) => delta.gtn(0) && delta.eq(tokenBalanceDeltasBefore[0])
+    )
+  ).to.be.true;
+
+  console.log("fund fee after share update");
+  svm.expireBlockhash();
+  await fundFee({
+    svm,
+    program,
+    funder,
+    fundAmount: new BN(100_000 * 10 ** TOKEN_DECIMALS),
+    feeVault: feeVault.publicKey,
+    tokenMint,
+  });
+
+  console.log("user claim fee that was funded after share update");
+  const tokenBalanceDeltasAfter = [];
+  for (let i = 0; i < users.length; i++) {
+    const user = users[i];
+    const userTokenVault = getOrCreateAtA(svm, user, tokenMint, user.publicKey);
+    const beforeUserBalance = getTokenBalance(svm, userTokenVault);
+    const claimFeeTx = await program.methods
+      .claimFee(i)
+      .accountsPartial({
+        feeVault: feeVault.publicKey,
+        tokenMint,
+        tokenVault,
+        userTokenVault,
+        user: user.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .transaction();
+
+    claimFeeTx.recentBlockhash = svm.latestBlockhash();
+    claimFeeTx.sign(user);
+
+    const claimFeeRes = svm.sendTransaction(claimFeeTx);
+    expect(claimFeeRes instanceof TransactionMetadata).to.be.true;
+    const afterUserBalance = getTokenBalance(svm, userTokenVault);
+    tokenBalanceDeltasAfter.push(afterUserBalance.sub(beforeUserBalance));
+  }
+
+  // user 0 should have a higher token balance delta compared to the other users
+  // all others should have the same token balance delta
+  expect(
+    tokenBalanceDeltasAfter
+      .slice(1)
+      .every((delta) => delta.gtn(0) && delta.eq(tokenBalanceDeltasAfter[1])) &&
+      tokenBalanceDeltasAfter[0].gt(tokenBalanceDeltasAfter[1])
+  ).to.be.true;
 }

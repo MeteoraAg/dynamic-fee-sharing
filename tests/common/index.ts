@@ -34,6 +34,9 @@ import {
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
+import { expect } from "chai";
+import { getTokenBalance, sendTransactionOrExpectThrowError } from "./svm";
+import { deriveOperatorAddress } from "./operator";
 
 export type InitializeFeeVaultParameters =
   IdlTypes<DynamicFeeSharing>["initializeFeeVaultParameters"];
@@ -277,4 +280,81 @@ export function expectThrowsErrorCode(
   } else {
     throw new Error("Expected an error but didn't get one");
   }
+}
+
+export async function fundFee(params: {
+  svm: LiteSVM;
+  program: DynamicFeeSharingProgram;
+  funder: Keypair;
+  fundAmount: BN;
+  feeVault: PublicKey;
+  tokenMint: PublicKey;
+}) {
+  const { svm, program, funder, fundAmount, feeVault, tokenMint } = params;
+
+  const fundTokenVault = getAssociatedTokenAddressSync(
+    tokenMint,
+    funder.publicKey
+  );
+  const tokenVault = deriveTokenVaultAddress(feeVault);
+  const beforeTokenBalance = getTokenBalance(svm, tokenVault);
+  const beforeFeeVaultState = getFeeVault(svm, feeVault);
+
+  const tx = await program.methods
+    .fundFee(fundAmount)
+    .accountsPartial({
+      feeVault,
+      tokenVault,
+      tokenMint,
+      fundTokenVault,
+      funder: funder.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .transaction();
+
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(funder);
+
+  const res = sendTransactionOrExpectThrowError(svm, tx);
+  expect(res instanceof TransactionMetadata).to.be.true;
+
+  const afterTokenBalance = getTokenBalance(svm, tokenVault);
+  const afterFeeVaultState = getFeeVault(svm, feeVault);
+  expect(afterTokenBalance.sub(beforeTokenBalance).eq(fundAmount)).to.be.true;
+  expect(
+    afterFeeVaultState.totalFundedFee
+      .sub(beforeFeeVaultState.totalFundedFee)
+      .eq(fundAmount)
+  ).to.be.true;
+}
+
+export async function updateUserShare(params: {
+  svm: LiteSVM;
+  program: DynamicFeeSharingProgram;
+  feeVault: PublicKey;
+  whitelistedUser: Keypair;
+  userIndex: number;
+  share: number;
+}) {
+  const { svm, program, feeVault, whitelistedUser, userIndex, share } = params;
+
+  const tx = await program.methods
+    .updateUserShare(userIndex, share)
+    .accountsPartial({
+      feeVault,
+      operator: deriveOperatorAddress(
+        whitelistedUser.publicKey,
+        program.programId
+      ),
+      signer: whitelistedUser.publicKey,
+    })
+    .transaction();
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(whitelistedUser);
+
+  const res = sendTransactionOrExpectThrowError(svm, tx);
+  expect(res instanceof TransactionMetadata).to.be.true;
+
+  const feeVaultState = getFeeVault(svm, feeVault);
+  expect(feeVaultState.users[userIndex].share).eq(share);
 }
