@@ -27,3 +27,10 @@ pub struct EvtClaimFee {
     pub index: u8,
     pub claimed_fee: u64,
 }
+
+#[event]
+pub struct EvtUpdateUserShare {
+    pub fee_vault: Pubkey,
+    pub index: u8,
+    pub share: u32,
+}

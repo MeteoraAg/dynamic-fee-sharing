@@ -39,7 +39,8 @@ pub struct FeeVault {
     pub total_funded_fee: u64,
     pub fee_per_share: u128,
     pub base: Pubkey,
-    pub padding: [u128; 4],
+    pub operator_address: Pubkey,
+    pub padding: [u128; 2],
     pub users: [UserFee; MAX_USER],
 }
 const_assert_eq!(FeeVault::INIT_SPACE, 640);
@@ -51,7 +52,8 @@ pub struct UserFee {
     pub share: u32,
     pub padding_0: [u8; 4],
     pub fee_claimed: u64,
-    pub padding: [u8; 16], // padding for future use
+    pub pending_fee: u64,
+    pub padding: [u8; 8], // padding for future use
     pub fee_per_share_checkpoint: u128,
 }
 const_assert_eq!(UserFee::INIT_SPACE, 80);
@@ -107,13 +109,16 @@ impl FeeVault {
             .ok_or_else(|| FeeVaultError::InvalidUserIndex)?;
         require!(user.address.eq(signer), FeeVaultError::InvalidUserAddress);
 
-        let reward_per_share_delta = self.fee_per_share.safe_sub(user.fee_per_share_checkpoint)?;
+        let fee_per_share_delta = self.fee_per_share.safe_sub(user.fee_per_share_checkpoint)?;
 
-        let fee_being_claimed = mul_shr(user.share.into(), reward_per_share_delta, PRECISION_SCALE)
+        let current_fee: u64 = mul_shr(user.share.into(), fee_per_share_delta, PRECISION_SCALE)
             .ok_or_else(|| FeeVaultError::MathOverflow)?
             .try_into()
             .map_err(|_| FeeVaultError::MathOverflow)?;
 
+        let fee_being_claimed = user.pending_fee.safe_add(current_fee)?;
+
+        user.pending_fee = 0;
         user.fee_per_share_checkpoint = self.fee_per_share;
         user.fee_claimed = user.fee_claimed.safe_add(fee_being_claimed)?;
 
@@ -124,5 +129,39 @@ impl FeeVault {
         self.users
             .iter()
             .any(|share_holder| share_holder.address.eq(signer))
+    }
+
+    pub fn validate_and_update_share(&mut self, index: u8, share: u32) -> Result<()> {
+        require!(
+            index < self.users.len() as u8,
+            FeeVaultError::InvalidUserIndex
+        );
+        require!(share > 0, FeeVaultError::InvalidFeeVaultParameters);
+
+        // when updating user share, we need to update the pending fee for all users
+        // based on the current fee per share to preserve the fee distribution up to that point
+        let mut total_share = 0;
+        for (i, user) in self.users.iter_mut().enumerate() {
+            let fee_per_share_delta = self.fee_per_share.safe_sub(user.fee_per_share_checkpoint)?;
+            let pending_fee = mul_shr(user.share.into(), fee_per_share_delta, PRECISION_SCALE)
+                .ok_or_else(|| FeeVaultError::MathOverflow)?
+                .try_into()
+                .map_err(|_| FeeVaultError::MathOverflow)?;
+
+            user.pending_fee = user.pending_fee.safe_add(pending_fee)?;
+            user.fee_per_share_checkpoint = self.fee_per_share;
+
+            if i == index as usize {
+                require!(
+                    share != user.share,
+                    FeeVaultError::InvalidFeeVaultParameters
+                );
+                user.share = share;
+            }
+            total_share = total_share.safe_add(user.share)?;
+        }
+        self.total_share = total_share;
+
+        Ok(())
     }
 }

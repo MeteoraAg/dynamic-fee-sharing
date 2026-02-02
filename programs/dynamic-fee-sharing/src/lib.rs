@@ -45,4 +45,14 @@ pub mod dynamic_fee_sharing {
     pub fn claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {
         instructions::handle_claim_fee(ctx, index)
     }
+
+    #[access_control(is_valid_operator_role(&ctx.accounts.fee_vault, &ctx.accounts.operator, ctx.accounts.signer.key, OperatorPermission::UpdateUserShare))]
+    pub fn update_user_share(
+        ctx: Context<UpdateUserShareCtx>,
+        index: u8,
+        share: u32,
+    ) -> Result<()> {
+        instructions::handle_update_user_share(ctx, index, share)
+    }
+
 }
