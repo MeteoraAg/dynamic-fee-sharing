@@ -4,7 +4,6 @@
 
 - Program ID: `dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh`
 
-
 ### Development
 
 ### Dependencies
@@ -14,7 +13,7 @@
 
 ### Build
 
-Program 
+Program
 
 ```
 anchor build --ignore-keys
