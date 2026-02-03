@@ -23,6 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## dynamic-fee-sharing [0.1.2] [PR #15](https://github.com/MeteoraAg/dynamic-fee-sharing/pull/15)
 
+### Added
+
+- Add a new endpoint `create_operator_account` and `close_operator_account`that allows vault owner to manage different operator accounts
+- Add a new account `Operator`, that would stores `whitelisted_address` as well as their operational permissions
+- Add a new endpoint `update_user_share` that allows an operator to update a user's share. This affects the fees the user will be entitled to when the vault is funded. Any fees users earned before the share changed will be preserved.
+
 ### Changed
 
 - Update anchor to `1.0.2`
