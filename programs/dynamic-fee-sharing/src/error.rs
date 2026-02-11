@@ -37,7 +37,4 @@ pub enum FeeVaultError {
 
     #[msg("Invalid permission")]
     InvalidPermission,
-
-    #[msg("Operator already exists")]
-    OperatorAlreadyExists,
 }

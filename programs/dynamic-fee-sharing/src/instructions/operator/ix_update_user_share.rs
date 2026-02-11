@@ -1,16 +1,14 @@
 use crate::event::EvtUpdateUserShare;
-use crate::state::{FeeVault, Operator};
+use crate::state::FeeVault;
 use anchor_lang::prelude::*;
 
 #[event_cpi]
 #[derive(Accounts)]
 pub struct UpdateUserShareCtx<'info> {
-    #[account(mut)]
+    #[account(mut, has_one = operator)]
     pub fee_vault: AccountLoader<'info, FeeVault>,
 
-    pub operator: AccountLoader<'info, Operator>,
-
-    pub signer: Signer<'info>,
+    pub operator: Signer<'info>,
 }
 
 pub fn handle_update_user_share(

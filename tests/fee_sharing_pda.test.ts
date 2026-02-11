@@ -16,6 +16,7 @@ import {
   InitializeFeeVaultParameters,
   mintToken,
   TOKEN_DECIMALS,
+  updateOperator,
   updateUserShare,
 } from "./common";
 import { BN } from "bn.js";
@@ -28,7 +29,6 @@ import { expect } from "chai";
 
 import DynamicFeeSharingIDL from "../target/idl/dynamic_fee_sharing.json";
 import { getTokenBalance } from "./common/svm";
-import { createOperatorAccount, OperatorPermission } from "./common/operator";
 
 describe("Fee vault pda sharing", () => {
   let program: DynamicFeeSharingProgram;
@@ -168,7 +168,7 @@ async function fullFlow(
   users: Keypair[],
   vaultOwner: Keypair,
   tokenMint: PublicKey,
-  whitelistedUser: Keypair,
+  operator: Keypair,
   params: InitializeFeeVaultParameters,
 ) {
   const program = createProgram();
@@ -218,13 +218,12 @@ async function fullFlow(
   }
 
   console.log("create vault operator account");
-  await createOperatorAccount({
+  await updateOperator({
     svm,
     program,
     feeVault,
-    whitelistedUser: whitelistedUser.publicKey,
+    operator: operator.publicKey,
     vaultOwner,
-    permissions: [OperatorPermission.UpdateUserShare],
   });
 
   console.log("fund fee");
@@ -290,7 +289,7 @@ async function fullFlow(
     svm,
     program,
     feeVault,
-    whitelistedUser,
+    operator,
     userIndex: 0,
     share: 2000,
   });

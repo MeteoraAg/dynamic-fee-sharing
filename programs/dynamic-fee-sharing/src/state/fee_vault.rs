@@ -39,7 +39,7 @@ pub struct FeeVault {
     pub total_funded_fee: u64,
     pub fee_per_share: u128,
     pub base: Pubkey,
-    pub operator_address: Pubkey,
+    pub operator: Pubkey,
     pub padding: [u128; 2],
     pub users: [UserFee; MAX_USER],
 }
@@ -87,6 +87,7 @@ impl FeeVault {
         self.base = *base;
         self.fee_vault_bump = fee_vault_bump;
         self.fee_vault_type = fee_vault_type;
+        self.operator = Pubkey::default();
 
         Ok(())
     }

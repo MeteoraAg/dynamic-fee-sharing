@@ -332,29 +332,51 @@ export async function updateUserShare(params: {
   svm: LiteSVM;
   program: DynamicFeeSharingProgram;
   feeVault: PublicKey;
-  whitelistedUser: Keypair;
+  operator: Keypair;
   userIndex: number;
   share: number;
 }) {
-  const { svm, program, feeVault, whitelistedUser, userIndex, share } = params;
+  const { svm, program, feeVault, operator, userIndex, share } = params;
 
   const tx = await program.methods
     .updateUserShare(userIndex, share)
     .accountsPartial({
       feeVault,
-      operator: deriveOperatorAddress(
-        whitelistedUser.publicKey,
-        program.programId
-      ),
-      signer: whitelistedUser.publicKey,
+      operator: operator.publicKey,
     })
     .transaction();
   tx.recentBlockhash = svm.latestBlockhash();
-  tx.sign(whitelistedUser);
+  tx.sign(operator);
 
   const res = sendTransactionOrExpectThrowError(svm, tx);
   expect(res instanceof TransactionMetadata).to.be.true;
 
   const feeVaultState = getFeeVault(svm, feeVault);
   expect(feeVaultState.users[userIndex].share).eq(share);
+}
+
+export async function updateOperator(params: {
+  svm: LiteSVM;
+  program: DynamicFeeSharingProgram;
+  feeVault: PublicKey;
+  operator: PublicKey;
+  vaultOwner: Keypair;
+}) {
+  const { svm, program, feeVault, operator, vaultOwner } = params;
+  const updateOperatorTx = await program.methods
+    .updateOperator()
+    .accountsPartial({
+      feeVault,
+      operator,
+      owner: vaultOwner.publicKey,
+    })
+    .transaction();
+
+  updateOperatorTx.recentBlockhash = svm.latestBlockhash();
+  updateOperatorTx.sign(vaultOwner);
+  const createOperatorRes = svm.sendTransaction(updateOperatorTx);
+
+  expect(createOperatorRes instanceof TransactionMetadata).to.be.true;
+
+  return operator;
 }

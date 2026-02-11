@@ -3,13 +3,11 @@ use anchor_lang::Discriminator;
 
 pub const MAX_USER: usize = 5;
 pub const PRECISION_SCALE: u8 = 64;
-pub const MAX_OPERATION: u8 = 1;
 
 pub mod seeds {
     pub const FEE_VAULT_PREFIX: &[u8] = b"fee_vault";
     pub const FEE_VAULT_AUTHORITY_PREFIX: &[u8] = b"fee_vault_authority";
     pub const TOKEN_VAULT_PREFIX: &[u8] = b"token_vault";
-    pub const OPERATOR_PREFIX: &[u8] = b"operator";
 }
 
 // (program_id, instruction, index_of_token_vault_account)
