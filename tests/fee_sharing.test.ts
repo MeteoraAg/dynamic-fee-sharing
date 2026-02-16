@@ -133,6 +133,76 @@ describe("Fee vault sharing", () => {
     expectThrowsErrorCode(svm.sendTransaction(tx), errorCode);
   });
 
+  it("Fail to update user share and remove user when fee vault is not mutable", async () => {
+    const generatedUser = generateUsers(svm, 5);
+    const users = generatedUser.map((item) => ({
+      address: item.publicKey,
+      share: 1000,
+    }));
+
+    const params: InitializeFeeVaultParameters = {
+      mutableFlag: 0,
+      padding: [],
+      users,
+    };
+
+    const feeVault = Keypair.generate();
+    const tokenVault = deriveTokenVaultAddress(feeVault.publicKey);
+    const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
+
+    const tx = await program.methods
+      .initializeFeeVault(params)
+      .accountsPartial({
+        feeVault: feeVault.publicKey,
+        feeVaultAuthority,
+        tokenVault,
+        tokenMint,
+        owner: vaultOwner.publicKey,
+        payer: admin.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .transaction();
+
+    tx.recentBlockhash = svm.latestBlockhash();
+    tx.sign(admin, feeVault);
+    const initializeFeeVaultRes = svm.sendTransaction(tx);
+    expect(initializeFeeVaultRes instanceof TransactionMetadata).to.be.true;
+
+    await updateOperator({
+      svm,
+      program,
+      feeVault: feeVault.publicKey,
+      operator: user.publicKey,
+      vaultOwner,
+    });
+
+    const errorCode = getProgramErrorCodeHexString("InvalidAction");
+
+    const updateTx = await program.methods
+      .updateUserShare(0, 2000)
+      .accountsPartial({
+        feeVault: feeVault.publicKey,
+        signer: user.publicKey,
+      })
+      .transaction();
+    updateTx.recentBlockhash = svm.latestBlockhash();
+    updateTx.sign(user);
+    const updateUserShareRes = svm.sendTransaction(updateTx);
+    expectThrowsErrorCode(updateUserShareRes, errorCode);
+
+    const removeTx = await program.methods
+      .removeUser(0)
+      .accountsPartial({
+        feeVault: feeVault.publicKey,
+        signer: user.publicKey,
+      })
+      .transaction();
+    removeTx.recentBlockhash = svm.latestBlockhash();
+    removeTx.sign(user);
+    const removeUserRes = svm.sendTransaction(removeTx);
+    expectThrowsErrorCode(removeUserRes, errorCode);
+  });
+
   it("Full flow", async () => {
     const generatedUser = generateUsers(svm, 5); // 5 users
     const users = generatedUser.map((item) => {
