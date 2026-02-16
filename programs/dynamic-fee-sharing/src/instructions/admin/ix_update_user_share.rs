@@ -1,14 +1,15 @@
 use crate::event::EvtUpdateUserShare;
 use crate::state::FeeVault;
+use crate::utils::access_control::verify_is_mutable_and_admin;
 use anchor_lang::prelude::*;
 
 #[event_cpi]
 #[derive(Accounts)]
 pub struct UpdateUserShareCtx<'info> {
-    #[account(mut, has_one = operator)]
+    #[account(mut)]
     pub fee_vault: AccountLoader<'info, FeeVault>,
 
-    pub operator: Signer<'info>,
+    pub signer: Signer<'info>,
 }
 
 pub fn handle_update_user_share(
@@ -18,7 +19,9 @@ pub fn handle_update_user_share(
 ) -> Result<()> {
     let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
 
-    fee_vault.validate_and_update_share(index, share)?;
+    verify_is_mutable_and_admin(&fee_vault, &ctx.accounts.signer)?;
+
+    fee_vault.validate_and_update_share(index as usize, share)?;
 
     emit_cpi!(EvtUpdateUserShare {
         fee_vault: ctx.accounts.fee_vault.key(),

@@ -46,7 +46,7 @@ pub mod dynamic_fee_sharing {
         instructions::handle_claim_fee(ctx, index)
     }
 
-    pub fn update_operator(ctx: Context<UpdateOperatorAccountCtx>) -> Result<()> {
+    pub fn update_operator(ctx: Context<UpdateOperatorCtx>) -> Result<()> {
         instructions::handle_update_operator(ctx)
     }
 
@@ -56,5 +56,9 @@ pub mod dynamic_fee_sharing {
         share: u32,
     ) -> Result<()> {
         instructions::handle_update_user_share(ctx, index, share)
+    }
+
+    pub fn remove_user(ctx: Context<RemoveUserCtx>, index: u8) -> Result<()> {
+        instructions::handle_remove_user(ctx, index)
     }
 }

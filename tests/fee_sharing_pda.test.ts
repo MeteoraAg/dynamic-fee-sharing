@@ -15,6 +15,7 @@ import {
   getProgramErrorCodeHexString,
   InitializeFeeVaultParameters,
   mintToken,
+  removeUser,
   TOKEN_DECIMALS,
   updateOperator,
   updateUserShare,
@@ -71,6 +72,7 @@ describe("Fee vault pda sharing", () => {
     });
 
     const params: InitializeFeeVaultParameters = {
+      mutableFlag: 0,
       padding: [],
       users,
     };
@@ -97,7 +99,7 @@ describe("Fee vault pda sharing", () => {
     tx.recentBlockhash = svm.latestBlockhash();
     tx.sign(admin, baseKp);
 
-    const errorCode = getProgramErrorCodeHexString("ExceededUser");
+    const errorCode = getProgramErrorCodeHexString("InvalidNumberOfUsers");
     expectThrowsErrorCode(svm.sendTransaction(tx), errorCode);
   });
 
@@ -105,6 +107,7 @@ describe("Fee vault pda sharing", () => {
     const users = [];
 
     const params: InitializeFeeVaultParameters = {
+      mutableFlag: 0,
       padding: [],
       users,
     };
@@ -130,7 +133,7 @@ describe("Fee vault pda sharing", () => {
     tx.recentBlockhash = svm.latestBlockhash();
     tx.sign(admin, baseKp);
 
-    const errorCode = getProgramErrorCodeHexString("ExceededUser");
+    const errorCode = getProgramErrorCodeHexString("InvalidNumberOfUsers");
     expectThrowsErrorCode(svm.sendTransaction(tx), errorCode);
   });
 
@@ -144,6 +147,7 @@ describe("Fee vault pda sharing", () => {
     });
 
     const params: InitializeFeeVaultParameters = {
+      mutableFlag: 1,
       padding: [],
       users,
     };
@@ -285,7 +289,7 @@ async function fullFlow(
   });
 
   console.log("update user share");
-  updateUserShare({
+  await updateUserShare({
     svm,
     program,
     feeVault,
@@ -374,4 +378,31 @@ async function fullFlow(
       .every((delta) => delta.gtn(0) && delta.eq(tokenBalanceDeltasAfter[1])) &&
       tokenBalanceDeltasAfter[0].gt(tokenBalanceDeltasAfter[1]),
   ).to.be.true;
+
+  console.log("fund fee before remove user");
+  svm.expireBlockhash();
+  await fundFee({
+    svm,
+    program,
+    funder,
+    fundAmount: new BN(100_000 * 10 ** TOKEN_DECIMALS),
+    feeVault,
+    tokenMint,
+  });
+
+  const beforeFeePerShare = getFeeVault(svm, feeVault).feePerShare;
+
+  console.log("remove user");
+  await removeUser({
+    svm,
+    program,
+    feeVault,
+    signer: operator,
+    userIndex: 0,
+  });
+
+  const afterFeePerShare = getFeeVault(svm, feeVault).feePerShare;
+
+  // fee_per_share should increase because removed user's unclaimed fees are redistributed
+  expect(afterFeePerShare.gt(beforeFeePerShare)).to.be.true;
 }

@@ -14,6 +14,7 @@ import {
   getProgramErrorCodeHexString,
   InitializeFeeVaultParameters,
   mintToken,
+  removeUser,
   TOKEN_DECIMALS,
   updateOperator,
   updateUserShare,
@@ -43,7 +44,7 @@ describe("Fee vault sharing", () => {
     svm = new LiteSVM();
     svm.addProgramFromFile(
       new PublicKey(DynamicFeeSharingIDL.address),
-      "./target/deploy/dynamic_fee_sharing.so"
+      "./target/deploy/dynamic_fee_sharing.so",
     );
 
     admin = Keypair.generate();
@@ -70,6 +71,7 @@ describe("Fee vault sharing", () => {
     });
 
     const params: InitializeFeeVaultParameters = {
+      mutableFlag: 0,
       padding: [],
       users,
     };
@@ -94,7 +96,7 @@ describe("Fee vault sharing", () => {
     tx.recentBlockhash = svm.latestBlockhash();
     tx.sign(admin, feeVault);
 
-    const errorCode = getProgramErrorCodeHexString("ExceededUser");
+    const errorCode = getProgramErrorCodeHexString("InvalidNumberOfUsers");
     expectThrowsErrorCode(svm.sendTransaction(tx), errorCode);
   });
 
@@ -102,6 +104,7 @@ describe("Fee vault sharing", () => {
     const users = [];
 
     const params: InitializeFeeVaultParameters = {
+      mutableFlag: 0,
       padding: [],
       users,
     };
@@ -126,7 +129,7 @@ describe("Fee vault sharing", () => {
     tx.recentBlockhash = svm.latestBlockhash();
     tx.sign(admin, feeVault);
 
-    const errorCode = getProgramErrorCodeHexString("ExceededUser");
+    const errorCode = getProgramErrorCodeHexString("InvalidNumberOfUsers");
     expectThrowsErrorCode(svm.sendTransaction(tx), errorCode);
   });
 
@@ -140,6 +143,7 @@ describe("Fee vault sharing", () => {
     });
 
     const params: InitializeFeeVaultParameters = {
+      mutableFlag: 1,
       padding: [],
       users,
     };
@@ -198,13 +202,13 @@ async function fullFlow(
     expect(feeVaultState.tokenVault.toString()).eq(tokenVault.toString());
     const totalShare = params.users.reduce(
       (a, b) => a.add(new BN(b.share)),
-      new BN(0)
+      new BN(0),
     );
     expect(feeVaultState.totalShare).eq(totalShare.toNumber());
     expect(feeVaultState.totalFundedFee.toNumber()).eq(0);
 
     const totalUsers = feeVaultState.users.filter(
-      (item) => !item.address.equals(PublicKey.default)
+      (item) => !item.address.equals(PublicKey.default),
     ).length;
     expect(totalUsers).eq(params.users.length);
   } else {
@@ -256,10 +260,10 @@ async function fullFlow(
       const feeVaultState = getFeeVault(svm, feeVault.publicKey);
       const account = svm.getAccount(userTokenVault);
       const userTokenBalance = AccountLayout.decode(
-        account.data
+        account.data,
       ).amount.toString();
       expect(userTokenBalance.toString()).eq(
-        feeVaultState.users[i].feeClaimed.toString()
+        feeVaultState.users[i].feeClaimed.toString(),
       );
     } else {
       console.log(claimFeeRes.meta().logs());
@@ -278,7 +282,7 @@ async function fullFlow(
   });
 
   console.log("update user share");
-  updateUserShare({
+  await updateUserShare({
     svm,
     program,
     feeVault: feeVault.publicKey,
@@ -317,8 +321,8 @@ async function fullFlow(
   // all users should have the same token balance delta since the fee was funded before share was updated
   expect(
     tokenBalanceDeltasBefore.every(
-      (delta) => delta.gtn(0) && delta.eq(tokenBalanceDeltasBefore[0])
-    )
+      (delta) => delta.gtn(0) && delta.eq(tokenBalanceDeltasBefore[0]),
+    ),
   ).to.be.true;
 
   console.log("fund fee after share update");
@@ -365,6 +369,33 @@ async function fullFlow(
     tokenBalanceDeltasAfter
       .slice(1)
       .every((delta) => delta.gtn(0) && delta.eq(tokenBalanceDeltasAfter[1])) &&
-      tokenBalanceDeltasAfter[0].gt(tokenBalanceDeltasAfter[1])
+      tokenBalanceDeltasAfter[0].gt(tokenBalanceDeltasAfter[1]),
   ).to.be.true;
+
+  console.log("fund fee before remove user");
+  svm.expireBlockhash();
+  await fundFee({
+    svm,
+    program,
+    funder,
+    fundAmount: new BN(100_000 * 10 ** TOKEN_DECIMALS),
+    feeVault: feeVault.publicKey,
+    tokenMint,
+  });
+
+  const beforeFeePerShare = getFeeVault(svm, feeVault.publicKey).feePerShare;
+
+  console.log("remove user");
+  await removeUser({
+    svm,
+    program,
+    feeVault: feeVault.publicKey,
+    signer: operator,
+    userIndex: 0,
+  });
+
+  const afterFeePerShare = getFeeVault(svm, feeVault.publicKey).feePerShare;
+
+  // fee_per_share should increase because removed user's unclaimed fees are redistributed
+  expect(afterFeePerShare.gt(beforeFeePerShare)).to.be.true;
 }

@@ -80,6 +80,7 @@ pub fn handle_initialize_fee_vault_pda(
         &ctx.accounts.base.key,
         ctx.bumps.fee_vault,
         FeeVaultType::PdaAccount.into(),
+        params.mutable_flag,
     )?;
 
     emit_cpi!(EvtInitializeFeeVault {

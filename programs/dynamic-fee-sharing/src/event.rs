@@ -34,3 +34,9 @@ pub struct EvtUpdateUserShare {
     pub index: u8,
     pub share: u32,
 }
+
+#[event]
+pub struct EvtRemoveUser {
+    pub fee_vault: Pubkey,
+    pub index: u8,
+}

@@ -12,7 +12,8 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct InitializeFeeVaultParameters {
-    pub padding: [u64; 8], // for future use
+    pub padding: [u8; 63], // for future use
+    pub mutable_flag: u8,
     pub users: Vec<UserShare>,
 }
 
@@ -24,12 +25,12 @@ pub struct UserShare {
 
 impl InitializeFeeVaultParameters {
     pub fn validate(&self) -> Result<()> {
-        let number_of_user = self.users.len();
+        let number_of_users = self.users.len();
         require!(
-            number_of_user >= 2 && number_of_user <= MAX_USER,
-            FeeVaultError::ExceededUser
+            number_of_users >= 2 && number_of_users <= MAX_USER,
+            FeeVaultError::InvalidNumberOfUsers
         );
-        for i in 0..number_of_user {
+        for i in 0..number_of_users {
             require!(
                 self.users[i].share > 0,
                 FeeVaultError::InvalidFeeVaultParameters
@@ -108,6 +109,7 @@ pub fn handle_initialize_fee_vault(
         &Pubkey::default(),
         0,
         FeeVaultType::NonPdaAccount.into(),
+        params.mutable_flag,
     )?;
 
     emit_cpi!(EvtInitializeFeeVault {
@@ -130,6 +132,7 @@ pub fn create_fee_vault<'info>(
     base: &Pubkey,
     fee_vault_bump: u8,
     fee_vault_type: u8,
+    mutable_flag: u8,
 ) -> Result<()> {
     require!(is_supported_mint(&token_mint)?, FeeVaultError::InvalidMint);
 
@@ -145,6 +148,7 @@ pub fn create_fee_vault<'info>(
         fee_vault_bump,
         fee_vault_type,
         &params.users,
+        mutable_flag,
     )?;
     Ok(())
 }

@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct UpdateOperatorAccountCtx<'info> {
+pub struct UpdateOperatorCtx<'info> {
     #[account(mut, has_one = owner)]
     pub fee_vault: AccountLoader<'info, FeeVault>,
 
@@ -14,7 +14,7 @@ pub struct UpdateOperatorAccountCtx<'info> {
     pub owner: Signer<'info>,
 }
 
-pub fn handle_update_operator(ctx: Context<UpdateOperatorAccountCtx>) -> Result<()> {
+pub fn handle_update_operator(ctx: Context<UpdateOperatorCtx>) -> Result<()> {
     let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
 
     fee_vault.operator = ctx.accounts.operator.key();

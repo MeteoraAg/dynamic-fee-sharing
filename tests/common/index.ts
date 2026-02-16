@@ -36,7 +36,6 @@ import {
 } from "@solana/web3.js";
 import { expect } from "chai";
 import { getTokenBalance, sendTransactionOrExpectThrowError } from "./svm";
-import { deriveOperatorAddress } from "./operator";
 
 export type InitializeFeeVaultParameters =
   IdlTypes<DynamicFeeSharing>["initializeFeeVaultParameters"];
@@ -342,7 +341,7 @@ export async function updateUserShare(params: {
     .updateUserShare(userIndex, share)
     .accountsPartial({
       feeVault,
-      operator: operator.publicKey,
+      signer: operator.publicKey,
     })
     .transaction();
   tx.recentBlockhash = svm.latestBlockhash();
@@ -353,6 +352,29 @@ export async function updateUserShare(params: {
 
   const feeVaultState = getFeeVault(svm, feeVault);
   expect(feeVaultState.users[userIndex].share).eq(share);
+}
+
+export async function removeUser(params: {
+  svm: LiteSVM;
+  program: DynamicFeeSharingProgram;
+  feeVault: PublicKey;
+  signer: Keypair;
+  userIndex: number;
+}) {
+  const { svm, program, feeVault, signer, userIndex } = params;
+
+  const tx = await program.methods
+    .removeUser(userIndex)
+    .accountsPartial({
+      feeVault,
+      signer: signer.publicKey,
+    })
+    .transaction();
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(signer);
+
+  const res = sendTransactionOrExpectThrowError(svm, tx);
+  expect(res instanceof TransactionMetadata).to.be.true;
 }
 
 export async function updateOperator(params: {
