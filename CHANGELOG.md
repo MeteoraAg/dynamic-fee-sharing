@@ -25,9 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add a new endpoint `create_operator_account` and `close_operator_account`that allows vault owner to manage different operator accounts
-- Add a new account `Operator`, that would stores `whitelisted_address` as well as their operational permissions
-- Add a new endpoint `update_user_share` that allows an operator to update a user's share. This affects the fees the user will be entitled to when the vault is funded. Any fees users earned before the share changed will be preserved.
+- Add a new field `mutable_flag` to `FeeVault` to indicate its mutability
+- Add a new field `operator` to `FeeVault`. The `operator` and vault owner can perform admin instructions on mutable `FeeVault`
+- Add a new owner endpoint `update_operator` for vault owner to update the operator field
+- Add a new admin endpoint `remove_user` which removes a user and distributes their unclaimed fees proportionally based on the remaining users' share
+- Add a new admin endpoint `update_user_share` to update a user's share. This affects the fees the user will be entitled to when the vault is funded. Any fees users earned before the share changed will be preserved
 
 ### Changed
 
