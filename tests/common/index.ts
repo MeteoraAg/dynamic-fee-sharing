@@ -48,7 +48,7 @@ export type DynamicFeeSharingProgram = Program<DynamicFeeSharing>;
 export const TOKEN_DECIMALS = 9;
 export const RAW_AMOUNT = 1_000_000_000 * 10 ** TOKEN_DECIMALS;
 export const DYNAMIC_FEE_SHARING_PROGRAM_ID = new PublicKey(
-  DynamicFeeSharingIDL.address
+  DynamicFeeSharingIDL.address,
 );
 export const U64_MAX = new BN("18446744073709551615");
 
@@ -57,11 +57,11 @@ export function createProgram(): DynamicFeeSharingProgram {
   const provider = new AnchorProvider(
     new Connection(clusterApiUrl("devnet")),
     wallet,
-    {}
+    {},
   );
   const program = new Program<DynamicFeeSharing>(
     DynamicFeeSharingIDL as DynamicFeeSharing,
-    provider
+    provider,
   );
   return program;
 }
@@ -76,7 +76,7 @@ export function deriveFeeVaultAuthorityAddress(): PublicKey {
   const program = createProgram();
   return PublicKey.findProgramAddressSync(
     [Buffer.from("fee_vault_authority")],
-    program.programId
+    program.programId,
   )[0];
 }
 
@@ -84,18 +84,18 @@ export function deriveTokenVaultAddress(feeVault: PublicKey): PublicKey {
   const program = createProgram();
   return PublicKey.findProgramAddressSync(
     [Buffer.from("token_vault"), feeVault.toBuffer()],
-    program.programId
+    program.programId,
   )[0];
 }
 
 export function deriveFeeVaultPdaAddress(
   base: PublicKey,
-  tokenMint: PublicKey
+  tokenMint: PublicKey,
 ): PublicKey {
   const program = createProgram();
   return PublicKey.findProgramAddressSync(
     [Buffer.from("fee_vault"), base.toBuffer(), tokenMint.toBuffer()],
-    program.programId
+    program.programId,
   )[0];
 }
 
@@ -103,7 +103,7 @@ export function createToken(
   svm: LiteSVM,
   payer: Keypair,
   mintAuthority: PublicKey,
-  freezeAuthority?: PublicKey
+  freezeAuthority?: PublicKey,
 ): PublicKey {
   const mintKeypair = Keypair.generate();
   const rent = svm.getRent();
@@ -121,7 +121,7 @@ export function createToken(
     mintKeypair.publicKey,
     TOKEN_DECIMALS,
     mintAuthority,
-    freezeAuthority
+    freezeAuthority,
   );
 
   let transaction = new Transaction();
@@ -140,7 +140,7 @@ export function mintToken(
   mint: PublicKey,
   mintAuthority: Keypair,
   toWallet: PublicKey,
-  amount?: number
+  amount?: number,
 ) {
   const destination = getOrCreateAtA(svm, payer, mint, toWallet);
 
@@ -148,7 +148,7 @@ export function mintToken(
     mint,
     destination,
     mintAuthority.publicKey,
-    amount ?? RAW_AMOUNT
+    amount ?? RAW_AMOUNT,
   );
 
   let transaction = new Transaction();
@@ -164,7 +164,7 @@ export function getOrCreateAtA(
   payer: Keypair,
   mint: PublicKey,
   owner: PublicKey,
-  tokenProgram = TOKEN_PROGRAM_ID
+  tokenProgram = TOKEN_PROGRAM_ID,
 ): PublicKey {
   const ataKey = getAssociatedTokenAddressSync(mint, owner, true, tokenProgram);
 
@@ -175,7 +175,7 @@ export function getOrCreateAtA(
       ataKey,
       owner,
       mint,
-      tokenProgram
+      tokenProgram,
     );
     let transaction = new Transaction();
 
@@ -191,7 +191,7 @@ export function getOrCreateAtA(
 export const wrapSOLInstruction = (
   from: PublicKey,
   to: PublicKey,
-  amount: bigint
+  amount: bigint,
 ): TransactionInstruction[] => {
   return [
     SystemProgram.transfer({
@@ -215,12 +215,12 @@ export const wrapSOLInstruction = (
 
 export const unwrapSOLInstruction = (
   owner: PublicKey,
-  allowOwnerOffCurve = true
+  allowOwnerOffCurve = true,
 ) => {
   const wSolATAAccount = getAssociatedTokenAddressSync(
     NATIVE_MINT,
     owner,
-    allowOwnerOffCurve
+    allowOwnerOffCurve,
   );
   if (wSolATAAccount) {
     const closedWrappedSolInstruction = createCloseAccountInstruction(
@@ -228,7 +228,7 @@ export const unwrapSOLInstruction = (
       owner,
       owner,
       [],
-      TOKEN_PROGRAM_ID
+      TOKEN_PROGRAM_ID,
     );
     return closedWrappedSolInstruction;
   }
@@ -250,12 +250,12 @@ export function getProgramErrorCodeHexString(errorMessage: String) {
   const error = DynamicFeeSharingIDL.errors.find(
     (e) =>
       e.name.toLowerCase() === errorMessage.toLowerCase() ||
-      e.msg.toLowerCase() === errorMessage.toLowerCase()
+      e.msg.toLowerCase() === errorMessage.toLowerCase(),
   );
 
   if (!error) {
     throw new Error(
-      `Unknown Dynamic Fee Sharing error message / name: ${errorMessage}`
+      `Unknown Dynamic Fee Sharing error message / name: ${errorMessage}`,
     );
   }
 
@@ -264,14 +264,14 @@ export function getProgramErrorCodeHexString(errorMessage: String) {
 
 export function expectThrowsErrorCode(
   response: TransactionMetadata | FailedTransactionMetadata,
-  errorCode: number
+  errorCode: number,
 ) {
   if (response instanceof FailedTransactionMetadata) {
     const message = response.err().toString();
 
     if (!message.toString().includes(errorCode.toString())) {
       throw new Error(
-        `Unexpected error: ${message}. Expected error: ${errorCode}`
+        `Unexpected error: ${message}. Expected error: ${errorCode}`,
       );
     }
 
@@ -293,7 +293,7 @@ export async function fundFee(params: {
 
   const fundTokenVault = getAssociatedTokenAddressSync(
     tokenMint,
-    funder.publicKey
+    funder.publicKey,
   );
   const tokenVault = deriveTokenVaultAddress(feeVault);
   const beforeTokenBalance = getTokenBalance(svm, tokenVault);
@@ -323,7 +323,7 @@ export async function fundFee(params: {
   expect(
     afterFeeVaultState.totalFundedFee
       .sub(beforeFeeVaultState.totalFundedFee)
-      .eq(fundAmount)
+      .eq(fundAmount),
   ).to.be.true;
 }
 
@@ -373,8 +373,16 @@ export async function removeUser(params: {
   tx.recentBlockhash = svm.latestBlockhash();
   tx.sign(signer);
 
+  const beforeUsersCount = getFeeVault(svm, feeVault).users.filter(
+    (x) => !x.address.equals(PublicKey.default),
+  ).length;
   const res = sendTransactionOrExpectThrowError(svm, tx);
+  const afterUsersCount = getFeeVault(svm, feeVault).users.filter(
+    (x) => !x.address.equals(PublicKey.default),
+  ).length;
+
   expect(res instanceof TransactionMetadata).to.be.true;
+  expect(beforeUsersCount - afterUsersCount).eq(1);
 }
 
 export async function updateOperator(params: {
@@ -397,8 +405,9 @@ export async function updateOperator(params: {
   updateOperatorTx.recentBlockhash = svm.latestBlockhash();
   updateOperatorTx.sign(vaultOwner);
   const createOperatorRes = svm.sendTransaction(updateOperatorTx);
-
+  const operatorField = getFeeVault(svm, feeVault).operator;
   expect(createOperatorRes instanceof TransactionMetadata).to.be.true;
+  expect(operatorField.equals(operator)).to.be.true;
 
   return operator;
 }
