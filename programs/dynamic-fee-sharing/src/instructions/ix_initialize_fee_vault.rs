@@ -40,6 +40,10 @@ impl InitializeFeeVaultParameters {
                 FeeVaultError::InvalidUserAddress
             );
         }
+        require!(
+            self.mutable_flag == 0 || self.mutable_flag == 1,
+            FeeVaultError::InvalidFeeVaultParameters
+        );
         // that is fine to leave user addresses are duplicated?
         Ok(())
     }
