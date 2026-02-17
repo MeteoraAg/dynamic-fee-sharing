@@ -209,6 +209,77 @@ describe("Fee vault pda sharing", () => {
     expectThrowsErrorCode(removeUserRes, errorCode);
   });
 
+  it("Fail to perform admin task when not an admin", async () => {
+    const generatedUser = generateUsers(svm, 5);
+    const users = generatedUser.map((item) => ({
+      address: item.publicKey,
+      share: 1000,
+    }));
+
+    const params: InitializeFeeVaultParameters = {
+      mutableFlag: 1,
+      padding: [],
+      users,
+    };
+
+    const baseKp = Keypair.generate();
+    const feeVault = deriveFeeVaultPdaAddress(baseKp.publicKey, tokenMint);
+    const tokenVault = deriveTokenVaultAddress(feeVault);
+    const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
+
+    const tx = await program.methods
+      .initializeFeeVaultPda(params)
+      .accountsPartial({
+        feeVault,
+        base: baseKp.publicKey,
+        feeVaultAuthority,
+        tokenVault,
+        tokenMint,
+        owner: vaultOwner.publicKey,
+        payer: admin.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .transaction();
+
+    tx.recentBlockhash = svm.latestBlockhash();
+    tx.sign(admin, baseKp);
+    const initializeFeeVaultRes = svm.sendTransaction(tx);
+    expect(initializeFeeVaultRes instanceof TransactionMetadata).to.be.true;
+
+    const errorCode = getProgramErrorCodeHexString("InvalidPermission");
+
+    const updateTx1 = await program.methods
+      .updateUserShare(0, 2000)
+      .accountsPartial({
+        feeVault,
+        signer: user.publicKey,
+      })
+      .transaction();
+    updateTx1.recentBlockhash = svm.latestBlockhash();
+    updateTx1.sign(user);
+    const updateUserShareRes1 = svm.sendTransaction(updateTx1);
+    expectThrowsErrorCode(updateUserShareRes1, errorCode);
+
+    await updateOperator({
+      svm,
+      program,
+      feeVault,
+      operator: user.publicKey,
+      vaultOwner,
+    });
+
+    svm.expireBlockhash();
+    // expect update to succeed
+    await updateUserShare({
+      svm,
+      program,
+      feeVault,
+      operator: user,
+      userIndex: 0,
+      share: 2000,
+    });
+  });
+
   it("Full flow", async () => {
     const generatedUser = generateUsers(svm, 5); // 5 users
     const users = generatedUser.map((item) => {
