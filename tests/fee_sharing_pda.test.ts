@@ -37,6 +37,7 @@ describe("Fee vault pda sharing", () => {
   let admin: Keypair;
   let funder: Keypair;
   let vaultOwner: Keypair;
+  let baseKp: Keypair;
   let tokenMint: PublicKey;
   let user: Keypair;
 
@@ -52,6 +53,7 @@ describe("Fee vault pda sharing", () => {
     vaultOwner = Keypair.generate();
     funder = Keypair.generate();
     user = Keypair.generate();
+    baseKp = Keypair.generate();
 
     svm.airdrop(admin.publicKey, BigInt(LAMPORTS_PER_SOL));
     svm.airdrop(vaultOwner.publicKey, BigInt(LAMPORTS_PER_SOL));
@@ -77,7 +79,6 @@ describe("Fee vault pda sharing", () => {
       users,
     };
 
-    const baseKp = Keypair.generate();
     const feeVault = deriveFeeVaultPdaAddress(baseKp.publicKey, tokenMint);
     const tokenVault = deriveTokenVaultAddress(feeVault);
     const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
@@ -111,7 +112,7 @@ describe("Fee vault pda sharing", () => {
       padding: [],
       users,
     };
-    const baseKp = Keypair.generate();
+
     const feeVault = deriveFeeVaultPdaAddress(baseKp.publicKey, tokenMint);
     const tokenVault = deriveTokenVaultAddress(feeVault);
     const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
@@ -150,7 +151,6 @@ describe("Fee vault pda sharing", () => {
       users,
     };
 
-    const baseKp = Keypair.generate();
     const feeVault = deriveFeeVaultPdaAddress(baseKp.publicKey, tokenMint);
     const tokenVault = deriveTokenVaultAddress(feeVault);
     const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
@@ -222,7 +222,6 @@ describe("Fee vault pda sharing", () => {
       users,
     };
 
-    const baseKp = Keypair.generate();
     const feeVault = deriveFeeVaultPdaAddress(baseKp.publicKey, tokenMint);
     const tokenVault = deriveTokenVaultAddress(feeVault);
     const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
@@ -303,6 +302,7 @@ describe("Fee vault pda sharing", () => {
       vaultOwner,
       tokenMint,
       user,
+      baseKp,
       params,
     );
   });
@@ -316,10 +316,10 @@ async function fullFlow(
   vaultOwner: Keypair,
   tokenMint: PublicKey,
   operator: Keypair,
+  baseKp: Keypair,
   params: InitializeFeeVaultParameters,
 ) {
   const program = createProgram();
-  const baseKp = Keypair.generate();
   const feeVault = deriveFeeVaultPdaAddress(baseKp.publicKey, tokenMint);
   const tokenVault = deriveTokenVaultAddress(feeVault);
   const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
