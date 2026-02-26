@@ -1,5 +1,5 @@
 use crate::{
-    constants::{MAX_USER, PRECISION_SCALE},
+    constants::{MAX_USER, MIN_USER, PRECISION_SCALE},
     error::FeeVaultError,
     instructions::UserShare,
     math::{mul_shr, shl_div, SafeMath},
@@ -60,11 +60,14 @@ pub struct UserFee {
 const_assert_eq!(UserFee::INIT_SPACE, 80);
 
 impl UserFee {
-    pub fn get_pending_fee(&self, fee_per_share: u128) -> Result<u64> {
+    pub fn get_total_pending_fee(&self, fee_per_share: u128) -> Result<u64> {
         let delta = fee_per_share.safe_sub(self.fee_per_share_checkpoint)?;
-        mul_shr(self.share.into(), delta, PRECISION_SCALE)
+        let current_pending_fee = mul_shr(self.share.into(), delta, PRECISION_SCALE)
             .and_then(|fee| fee.try_into().ok())
-            .ok_or(FeeVaultError::MathOverflow.into())
+            .ok_or_else(|| FeeVaultError::MathOverflow)?;
+
+        let total_pending_fee = self.pending_fee.safe_add(current_pending_fee)?;
+        Ok(total_pending_fee)
     }
 }
 
@@ -118,12 +121,11 @@ impl FeeVault {
     pub fn validate_and_claim_fee(&mut self, index: usize, signer: &Pubkey) -> Result<u64> {
         let user = self
             .users
-            .get_mut(index as usize)
+            .get_mut(index)
             .ok_or_else(|| FeeVaultError::InvalidUserIndex)?;
         require!(user.address.eq(signer), FeeVaultError::InvalidUserAddress);
 
-        let current_pending_fee = user.get_pending_fee(self.fee_per_share)?;
-        let fee_being_claimed = user.pending_fee.safe_add(current_pending_fee)?;
+        let fee_being_claimed = user.get_total_pending_fee(self.fee_per_share)?;
 
         user.pending_fee = 0;
         user.fee_per_share_checkpoint = self.fee_per_share;
@@ -150,14 +152,13 @@ impl FeeVault {
         let mut total_share = 0;
         for (i, user) in self.users.iter_mut().enumerate() {
             if user.address == Pubkey::default() {
-                continue;
+                break;
             }
 
-            let current_pending_fee = user.get_pending_fee(self.fee_per_share)?;
-            user.pending_fee = user.pending_fee.safe_add(current_pending_fee)?;
+            user.pending_fee = user.get_total_pending_fee(self.fee_per_share)?;
             user.fee_per_share_checkpoint = self.fee_per_share;
 
-            if i == index as usize {
+            if i == index {
                 require!(
                     share != user.share,
                     FeeVaultError::InvalidFeeVaultParameters
@@ -171,46 +172,38 @@ impl FeeVault {
         Ok(())
     }
 
-    pub fn validate_and_remove_user(&mut self, index: usize) -> Result<()> {
+    pub fn validate_and_remove_user(&mut self, user_address: &Pubkey) -> Result<()> {
         require!(
-            index < MAX_USER && self.users[index].address != Pubkey::default(),
-            FeeVaultError::InvalidUserIndex
+            user_address != &Pubkey::default(),
+            FeeVaultError::InvalidUserAddress
         );
 
         let mut unclaimed_fee = 0;
-        let mut total_share = 0;
         let mut remaining_number_of_users = 0;
+        let mut removed_user_index = 0;
         for (i, user) in self.users.iter().enumerate() {
             if user.address == Pubkey::default() {
-                continue;
+                break;
             }
 
-            if i == index as usize {
-                let current_pending_fee = user.get_pending_fee(self.fee_per_share)?;
-                unclaimed_fee = user.pending_fee.safe_add(current_pending_fee)?;
+            if user.address.eq(user_address) {
+                self.total_share = self.total_share.safe_sub(user.share)?;
+                unclaimed_fee = user.get_total_pending_fee(self.fee_per_share)?;
+                removed_user_index = i;
             } else {
                 remaining_number_of_users = remaining_number_of_users.safe_add(1)?;
-                total_share = total_share.safe_add(user.share)?;
             }
         }
 
         require!(
-            remaining_number_of_users >= 2,
+            remaining_number_of_users >= MIN_USER,
             FeeVaultError::InvalidNumberOfUsers
         );
 
-        self.total_share = total_share;
-
-        // redistribute removed user's total unclaimed fees
-        if unclaimed_fee > 0 {
-            let fee_per_share_increase =
-                shl_div(unclaimed_fee, total_share.into(), PRECISION_SCALE)
-                    .ok_or_else(|| FeeVaultError::MathOverflow)?;
-            self.fee_per_share = self.fee_per_share.safe_add(fee_per_share_increase)?;
-        }
+        // TODO: create account for unclaimed fee for removed user to claim and close
 
         // shift users to the left
-        for i in index..MAX_USER - 1 {
+        for i in removed_user_index..MAX_USER - 1 {
             self.users[i] = self.users[i + 1];
         }
         self.users[MAX_USER - 1] = UserFee::default();

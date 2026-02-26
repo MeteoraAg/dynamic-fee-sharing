@@ -37,4 +37,7 @@ pub enum FeeVaultError {
 
     #[msg("Invalid permission")]
     InvalidPermission,
+
+    #[msg("Invalid operator address")]
+    InvalidOperatorAddress,
 }

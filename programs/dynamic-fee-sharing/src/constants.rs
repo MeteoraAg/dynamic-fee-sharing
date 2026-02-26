@@ -1,6 +1,7 @@
 use anchor_lang::prelude::Pubkey;
 use anchor_lang::Discriminator;
 
+pub const MIN_USER: usize = 2;
 pub const MAX_USER: usize = 5;
 pub const PRECISION_SCALE: u8 = 64;
 

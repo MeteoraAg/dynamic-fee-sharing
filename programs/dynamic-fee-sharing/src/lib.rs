@@ -10,6 +10,7 @@ pub mod event;
 pub mod math;
 pub mod state;
 pub mod utils;
+pub use utils::access_control::*;
 
 pub mod tests;
 declare_id!("dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh");
@@ -50,6 +51,7 @@ pub mod dynamic_fee_sharing {
         instructions::handle_update_operator(ctx)
     }
 
+    #[access_control(verify_is_mutable_and_admin(&ctx.accounts.fee_vault, ctx.accounts.signer.key))]
     pub fn update_user_share(
         ctx: Context<UpdateUserShareCtx>,
         index: u8,
@@ -58,7 +60,8 @@ pub mod dynamic_fee_sharing {
         instructions::handle_update_user_share(ctx, index, share)
     }
 
-    pub fn remove_user(ctx: Context<RemoveUserCtx>, index: u8) -> Result<()> {
-        instructions::handle_remove_user(ctx, index)
+    #[access_control(verify_is_mutable_and_admin(&ctx.accounts.fee_vault, ctx.accounts.signer.key))]
+    pub fn remove_user(ctx: Context<RemoveUserCtx>, user: Pubkey) -> Result<()> {
+        instructions::handle_remove_user(ctx, user)
     }
 }
