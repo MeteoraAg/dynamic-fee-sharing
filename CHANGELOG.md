@@ -26,10 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add a new field `mutable_flag` to `FeeVault` to indicate its mutability
-- Add a new field `operator` to `FeeVault`. The `operator` and vault owner can perform admin instructions on mutable `FeeVault`
+- Add a new field `operator` to `FeeVault`. The `operator` and vault owner can perform operator instructions on mutable `FeeVault`
 - Add a new owner endpoint `update_operator` for vault owner to update the operator field
-- Add a new admin endpoint `remove_user` which removes a user and distributes their unclaimed fees proportionally based on the remaining users' share
-- Add a new admin endpoint `update_user_share` to update a user's share. This affects the fees the user will be entitled to when the vault is funded. Any fees users earned before the share changed will be preserved
+- Add a new operator endpoint `remove_user` which removes a user and transfers any unclaimed fee into an account for the removed user to claim
+- Add a new endpoint `claim_removed_user_fee` where a user who have been removed from the `FeeVault` can claim any unclaimed fees
+- Add a new operator endpoint `update_user_share` to update a user's share. This affects the fees the user will be entitled to when the vault is funded. Any fees users earned before the share changed will be preserved
 
 ### Changed
 

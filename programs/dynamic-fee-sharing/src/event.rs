@@ -31,7 +31,7 @@ pub struct EvtClaimFee {
 #[event]
 pub struct EvtUpdateUserShare {
     pub fee_vault: Pubkey,
-    pub index: u8,
+    pub user: Pubkey,
     pub share: u32,
 }
 
@@ -39,4 +39,12 @@ pub struct EvtUpdateUserShare {
 pub struct EvtRemoveUser {
     pub fee_vault: Pubkey,
     pub user: Pubkey,
+    pub unclaimed_fee: u64,
+}
+
+#[event]
+pub struct EvtClaimRemovedUserFee {
+    pub fee_vault: Pubkey,
+    pub user: Pubkey,
+    pub claimed_fee: u64,
 }

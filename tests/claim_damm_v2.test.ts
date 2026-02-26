@@ -69,7 +69,7 @@ describe("Fund by claiming damm v2", () => {
       vaultOwner.publicKey,
       tokenBMint,
       {
-        mutableFlag: 0,
+        mutableFlag: false,
         padding: [],
         users: [
           {
@@ -145,7 +145,7 @@ describe("Fund by claiming damm v2", () => {
       vaultOwner.publicKey,
       rewardMint,
       {
-        mutableFlag: 0,
+        mutableFlag: false,
         padding: [],
         users: [
           {

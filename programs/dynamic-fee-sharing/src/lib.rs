@@ -51,17 +51,17 @@ pub mod dynamic_fee_sharing {
         instructions::handle_update_operator(ctx)
     }
 
-    #[access_control(verify_is_mutable_and_admin(&ctx.accounts.fee_vault, ctx.accounts.signer.key))]
-    pub fn update_user_share(
-        ctx: Context<UpdateUserShareCtx>,
-        index: u8,
-        share: u32,
-    ) -> Result<()> {
-        instructions::handle_update_user_share(ctx, index, share)
+    pub fn claim_removed_user_fee(ctx: Context<ClaimRemovedUserFeeCtx>) -> Result<()> {
+        instructions::handle_claim_removed_user_fee(ctx)
     }
 
     #[access_control(verify_is_mutable_and_admin(&ctx.accounts.fee_vault, ctx.accounts.signer.key))]
-    pub fn remove_user(ctx: Context<RemoveUserCtx>, user: Pubkey) -> Result<()> {
-        instructions::handle_remove_user(ctx, user)
+    pub fn update_user_share(ctx: Context<UpdateUserShareCtx>, share: u32) -> Result<()> {
+        instructions::handle_update_user_share(ctx, share)
+    }
+
+    #[access_control(verify_is_mutable_and_admin(&ctx.accounts.fee_vault, ctx.accounts.signer.key))]
+    pub fn remove_user(ctx: Context<RemoveUserCtx>) -> Result<()> {
+        instructions::handle_remove_user(ctx)
     }
 }

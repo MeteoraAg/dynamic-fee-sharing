@@ -1,9 +1,15 @@
 import { LiteSVM, TransactionMetadata } from "litesvm";
-import { PublicKey, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import {
+  PublicKey,
+  Keypair,
+  LAMPORTS_PER_SOL,
+  SystemProgram,
+} from "@solana/web3.js";
 import {
   createProgram,
   createToken,
   deriveFeeVaultAuthorityAddress,
+  deriveRemovedUserTokenVaultAddress,
   deriveTokenVaultAddress,
   DynamicFeeSharingProgram,
   expectThrowsErrorCode,
@@ -14,6 +20,7 @@ import {
   getProgramErrorCodeHexString,
   InitializeFeeVaultParameters,
   mintToken,
+  claimRemovedUserFee,
   removeUser,
   TOKEN_DECIMALS,
   updateOperator,
@@ -71,7 +78,7 @@ describe("Fee vault sharing", () => {
     });
 
     const params: InitializeFeeVaultParameters = {
-      mutableFlag: 0,
+      mutableFlag: false,
       padding: [],
       users,
     };
@@ -104,7 +111,7 @@ describe("Fee vault sharing", () => {
     const users = [];
 
     const params: InitializeFeeVaultParameters = {
-      mutableFlag: 0,
+      mutableFlag: false,
       padding: [],
       users,
     };
@@ -141,7 +148,7 @@ describe("Fee vault sharing", () => {
     }));
 
     const params: InitializeFeeVaultParameters = {
-      mutableFlag: 0,
+      mutableFlag: false,
       padding: [],
       users,
     };
@@ -179,9 +186,10 @@ describe("Fee vault sharing", () => {
     const errorCode = getProgramErrorCodeHexString("InvalidAction");
 
     const updateTx = await program.methods
-      .updateUserShare(0, 2000)
+      .updateUserShare(2000)
       .accountsPartial({
         feeVault: feeVault.publicKey,
+        user: generatedUser[0].publicKey,
         signer: user.publicKey,
       })
       .transaction();
@@ -190,11 +198,23 @@ describe("Fee vault sharing", () => {
     const updateUserShareRes = svm.sendTransaction(updateTx);
     expectThrowsErrorCode(updateUserShareRes, errorCode);
 
+    const removedUserTokenVault = deriveRemovedUserTokenVaultAddress(
+      feeVault.publicKey,
+      tokenMint,
+      generatedUser[0].publicKey,
+    );
     const removeTx = await program.methods
-      .removeUser(0)
+      .removeUser()
       .accountsPartial({
         feeVault: feeVault.publicKey,
+        feeVaultAuthority,
+        tokenVault,
+        tokenMint,
+        user: generatedUser[0].publicKey,
+        removedUserTokenVault,
         signer: user.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
       })
       .transaction();
     removeTx.recentBlockhash = svm.latestBlockhash();
@@ -211,7 +231,7 @@ describe("Fee vault sharing", () => {
     }));
 
     const params: InitializeFeeVaultParameters = {
-      mutableFlag: 1,
+      mutableFlag: true,
       padding: [],
       users,
     };
@@ -241,9 +261,10 @@ describe("Fee vault sharing", () => {
     const errorCode = getProgramErrorCodeHexString("InvalidPermission");
 
     const updateTx1 = await program.methods
-      .updateUserShare(0, 2000)
+      .updateUserShare(2000)
       .accountsPartial({
         feeVault: feeVault.publicKey,
+        user: generatedUser[0].publicKey,
         signer: user.publicKey,
       })
       .transaction();
@@ -267,7 +288,7 @@ describe("Fee vault sharing", () => {
       program,
       feeVault: feeVault.publicKey,
       operator: user,
-      userIndex: 0,
+      user: generatedUser[0].publicKey,
       share: 2000,
     });
   });
@@ -282,7 +303,7 @@ describe("Fee vault sharing", () => {
     });
 
     const params: InitializeFeeVaultParameters = {
-      mutableFlag: 1,
+      mutableFlag: true,
       padding: [],
       users,
     };
@@ -426,7 +447,7 @@ async function fullFlow(
     program,
     feeVault: feeVault.publicKey,
     operator,
-    userIndex: 0,
+    user: users[0].publicKey,
     share: 2000,
   });
 
@@ -525,16 +546,53 @@ async function fullFlow(
   const beforeFeePerShare = getFeeVault(svm, feeVault.publicKey).feePerShare;
 
   console.log("remove user");
-  await removeUser({
+  const removedUserTokenVault = await removeUser({
     svm,
     program,
     feeVault: feeVault.publicKey,
+    tokenMint,
     signer: operator,
-    userIndex: 0,
+    user: users[0].publicKey,
   });
 
   const afterFeePerShare = getFeeVault(svm, feeVault.publicKey).feePerShare;
 
-  // fee_per_share should increase because removed user's unclaimed fees are redistributed
-  expect(afterFeePerShare.gt(beforeFeePerShare)).to.be.true;
+  // fee_per_share should NOT increase
+  expect(afterFeePerShare.eq(beforeFeePerShare)).to.be.true;
+  // unclaimed fees are transferred to removed user's PDA token account
+  const removedUserBalance = getTokenBalance(svm, removedUserTokenVault);
+  expect(removedUserBalance.gtn(0)).to.be.true;
+
+  console.log("claim removed user fee");
+  svm.expireBlockhash();
+  const ownerBalanceBefore = svm.getBalance(vaultOwner.publicKey);
+  const userTokenBefore = getTokenBalance(
+    svm,
+    getOrCreateAtA(svm, users[0], tokenMint, users[0].publicKey),
+  );
+
+  const claimRes = await claimRemovedUserFee({
+    svm,
+    program,
+    feeVault: feeVault.publicKey,
+    tokenMint,
+    user: users[0],
+    owner: vaultOwner.publicKey,
+  });
+  expect(claimRes instanceof TransactionMetadata).to.be.true;
+
+  // removed user should have received their unclaimed tokens
+  const userTokenAfter = getTokenBalance(
+    svm,
+    getOrCreateAtA(svm, users[0], tokenMint, users[0].publicKey),
+  );
+  expect(userTokenAfter.sub(userTokenBefore).eq(removedUserBalance)).to.be.true;
+
+  // removed user token vault PDA should be closed
+  const closedRemovedUserTokenVault = svm.getAccount(removedUserTokenVault);
+  expect(closedRemovedUserTokenVault.lamports).eq(0);
+
+  // owner should have received rent back from removed user token vault
+  const ownerBalanceAfter = svm.getBalance(vaultOwner.publicKey);
+  expect(ownerBalanceAfter > ownerBalanceBefore).to.be.true;
 }

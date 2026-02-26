@@ -140,74 +140,83 @@ impl FeeVault {
             .any(|share_holder| share_holder.address.eq(signer))
     }
 
-    pub fn validate_and_update_share(&mut self, index: usize, share: u32) -> Result<()> {
-        require!(
-            index < MAX_USER && self.users[index].address != Pubkey::default(),
-            FeeVaultError::InvalidUserIndex
-        );
-        require!(share > 0, FeeVaultError::InvalidFeeVaultParameters);
-
-        // when updating user share, we need to update the pending fee for all users
-        // based on the current fee per share to preserve the fee distribution up to that point
-        let mut total_share = 0;
-        for (i, user) in self.users.iter_mut().enumerate() {
-            if user.address == Pubkey::default() {
-                break;
-            }
-
-            user.pending_fee = user.get_total_pending_fee(self.fee_per_share)?;
-            user.fee_per_share_checkpoint = self.fee_per_share;
-
-            if i == index {
-                require!(
-                    share != user.share,
-                    FeeVaultError::InvalidFeeVaultParameters
-                );
-                user.share = share;
-            }
-            total_share = total_share.safe_add(user.share)?;
-        }
-        self.total_share = total_share;
-
-        Ok(())
-    }
-
-    pub fn validate_and_remove_user(&mut self, user_address: &Pubkey) -> Result<()> {
+    pub fn validate_and_update_share(&mut self, user_address: &Pubkey, share: u32) -> Result<()> {
         require!(
             user_address != &Pubkey::default(),
             FeeVaultError::InvalidUserAddress
         );
 
-        let mut unclaimed_fee = 0;
-        let mut remaining_number_of_users = 0;
-        let mut removed_user_index = 0;
-        for (i, user) in self.users.iter().enumerate() {
-            if user.address == Pubkey::default() {
-                break;
-            }
-
-            if user.address.eq(user_address) {
-                self.total_share = self.total_share.safe_sub(user.share)?;
-                unclaimed_fee = user.get_total_pending_fee(self.fee_per_share)?;
-                removed_user_index = i;
-            } else {
-                remaining_number_of_users = remaining_number_of_users.safe_add(1)?;
-            }
-        }
+        let index = self
+            .users
+            .iter()
+            .position(|user| user.address.eq(user_address))
+            .ok_or_else(|| FeeVaultError::InvalidUserAddress)?;
 
         require!(
-            remaining_number_of_users >= MIN_USER,
+            share != self.users[index].share,
+            FeeVaultError::InvalidFeeVaultParameters
+        );
+
+        let user = &mut self.users[index];
+
+        self.total_share = self.total_share.safe_sub(user.share)?.safe_add(share)?;
+
+        user.pending_fee = user.get_total_pending_fee(self.fee_per_share)?;
+        user.fee_per_share_checkpoint = self.fee_per_share;
+        user.share = share;
+
+        Ok(())
+    }
+
+    pub fn validate_and_remove_user_and_get_unclaimed_fee(
+        &mut self,
+        user_address: &Pubkey,
+    ) -> Result<u64> {
+        require!(
+            user_address != &Pubkey::default(),
+            FeeVaultError::InvalidUserAddress
+        );
+
+        let (index, user_count) = get_user_index_and_user_count(&self.users, user_address)?;
+
+        require!(
+            user_count - 1 >= MIN_USER,
             FeeVaultError::InvalidNumberOfUsers
         );
 
-        // TODO: create account for unclaimed fee for removed user to claim and close
+        let unclaimed_fee = self.users[index].get_total_pending_fee(self.fee_per_share)?;
+
+        self.total_share = self.total_share.safe_sub(self.users[index].share)?;
 
         // shift users to the left
-        for i in removed_user_index..MAX_USER - 1 {
+        for i in index..MAX_USER - 1 {
             self.users[i] = self.users[i + 1];
         }
         self.users[MAX_USER - 1] = UserFee::default();
 
-        Ok(())
+        Ok(unclaimed_fee)
     }
+}
+
+fn get_user_index_and_user_count(
+    users: &[UserFee],
+    user_address: &Pubkey,
+) -> Result<(usize, usize)> {
+    let mut index = None;
+    let mut active_user_count = 0usize;
+
+    for (i, user) in users.iter().enumerate() {
+        if user.address == Pubkey::default() {
+            break;
+        }
+
+        active_user_count += 1;
+
+        if index.is_none() && user.address.eq(user_address) {
+            index = Some(i);
+        }
+    }
+
+    let index = index.ok_or_else(|| FeeVaultError::InvalidUserAddress)?;
+    Ok((index, active_user_count))
 }

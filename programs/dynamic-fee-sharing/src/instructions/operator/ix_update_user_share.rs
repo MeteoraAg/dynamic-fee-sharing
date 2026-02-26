@@ -8,21 +8,20 @@ pub struct UpdateUserShareCtx<'info> {
     #[account(mut)]
     pub fee_vault: AccountLoader<'info, FeeVault>,
 
+    /// CHECK: the user whose share is being updated
+    pub user: UncheckedAccount<'info>,
+
     pub signer: Signer<'info>,
 }
 
-pub fn handle_update_user_share(
-    ctx: Context<UpdateUserShareCtx>,
-    index: u8,
-    share: u32,
-) -> Result<()> {
+pub fn handle_update_user_share(ctx: Context<UpdateUserShareCtx>, share: u32) -> Result<()> {
     let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
-
-    fee_vault.validate_and_update_share(index.into(), share)?;
+    let user = ctx.accounts.user.key();
+    fee_vault.validate_and_update_share(&user, share)?;
 
     emit_cpi!(EvtUpdateUserShare {
         fee_vault: ctx.accounts.fee_vault.key(),
-        index,
+        user,
         share,
     });
 

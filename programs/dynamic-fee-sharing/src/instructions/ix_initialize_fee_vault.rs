@@ -13,7 +13,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct InitializeFeeVaultParameters {
     pub padding: [u8; 63], // for future use
-    pub mutable_flag: u8,
+    pub mutable_flag: bool,
     pub users: Vec<UserShare>,
 }
 
@@ -40,10 +40,6 @@ impl InitializeFeeVaultParameters {
                 FeeVaultError::InvalidUserAddress
             );
         }
-        require!(
-            self.mutable_flag == 0 || self.mutable_flag == 1,
-            FeeVaultError::InvalidFeeVaultParameters
-        );
         // that is fine to leave user addresses are duplicated?
         Ok(())
     }
@@ -113,7 +109,7 @@ pub fn handle_initialize_fee_vault(
         &Pubkey::default(),
         0,
         FeeVaultType::NonPdaAccount.into(),
-        params.mutable_flag,
+        params.mutable_flag.into(),
     )?;
 
     emit_cpi!(EvtInitializeFeeVault {
