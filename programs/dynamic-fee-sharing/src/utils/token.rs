@@ -1,12 +1,18 @@
-use anchor_lang::{prelude::*, solana_program::program::invoke_signed};
+use anchor_lang::{
+    prelude::*,
+    solana_program::{program::invoke_signed, system_instruction},
+};
 use anchor_spl::{
-    token::Token,
-    token_2022::spl_token_2022::{
-        self,
-        extension::{
-            self, transfer_fee::TransferFee, BaseStateWithExtensions, ExtensionType,
-            StateWithExtensions,
+    token::{Token, TokenAccount},
+    token_2022::{
+        spl_token_2022::{
+            self,
+            extension::{
+                self, transfer_fee::TransferFee, BaseStateWithExtensions, ExtensionType,
+                StateWithExtensions,
+            },
         },
+        Token2022,
     },
     token_interface::{Mint, TokenAccount},
 };
@@ -112,13 +118,11 @@ pub fn transfer_from_user<'a, 'info>(
     token_program: &'a AccountInfo<'info>,
     amount: u64,
 ) -> Result<()> {
-    let destination_account = destination_token_account.to_account_info();
-
     let instruction = spl_token_2022::instruction::transfer_checked(
         token_program.key,
-        &token_owner_account.key(),
+        token_owner_account.key,
         &token_mint.key(),
-        destination_account.key,
+        destination_token_account.key,
         authority.key,
         &[],
         amount,
@@ -126,10 +130,10 @@ pub fn transfer_from_user<'a, 'info>(
     )?;
 
     let account_infos = vec![
-        token_owner_account.to_account_info(),
+        token_owner_account,
         token_mint.to_account_info(),
-        destination_account.to_account_info(),
-        authority.to_account_info(),
+        destination_token_account,
+        authority,
     ];
 
     invoke_signed(&instruction, &account_infos, &[])?;
@@ -149,23 +153,80 @@ pub fn transfer_from_fee_vault<'info>(
 
     let instruction = spl_token_2022::instruction::transfer_checked(
         token_program.key,
-        &token_vault.key(),
+        token_vault.key,
         &token_mint.key(),
-        &token_owner_account.key(),
-        &pool_authority.key(),
+        token_owner_account.key,
+        pool_authority.key,
         &[],
         amount,
         token_mint.decimals,
     )?;
 
     let account_infos = vec![
-        token_vault.to_account_info(),
+        token_vault,
         token_mint.to_account_info(),
-        token_owner_account.to_account_info(),
-        pool_authority.to_account_info(),
+        token_owner_account,
+        pool_authority,
     ];
 
     invoke_signed(&instruction, &account_infos, &[&signer_seeds[..]])?;
 
     Ok(())
+}
+
+pub fn create_pda_token_account<'info>(
+    payer: AccountInfo<'info>,
+    new_account: AccountInfo<'info>,
+    mint: &InterfaceAccount<'info, Mint>,
+    authority: &Pubkey,
+    token_program: &Interface<'info, TokenInterface>,
+    system_program: AccountInfo<'info>,
+    signer_seeds: &[&[u8]],
+) -> Result<()> {
+    let space = get_token_account_space(mint)?;
+    let rent = Rent::get()?;
+    let lamports = rent.minimum_balance(space);
+
+    invoke_signed(
+        &system_instruction::create_account(
+            payer.key,
+            new_account.key,
+            lamports,
+            space as u64,
+            token_program.key,
+        ),
+        &[payer, new_account.clone(), system_program],
+        &[signer_seeds],
+    )?;
+
+    invoke_signed(
+        &spl_token_2022::instruction::initialize_account3(
+            token_program.key,
+            new_account.key,
+            &mint.key(),
+            authority,
+        )?,
+        &[new_account, mint.to_account_info()],
+        &[],
+    )?;
+
+    Ok(())
+}
+
+// refrence https://github.com/solana-foundation/anchor/blob/1ebbe58158d089a2a40b5e35ebead5a10db9090d/lang/syn/src/codegen/accounts/constraints.rs#L1599
+fn get_token_account_space(mint: &InterfaceAccount<Mint>) -> Result<usize> {
+    let mint_info = mint.to_account_info();
+    if *mint_info.owner == Token2022::id() {
+        let mint_data = mint_info.try_borrow_data()?;
+        let unpacked = StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&mint_data)?;
+        let mint_extensions = unpacked.get_extension_types()?;
+        let required_extensions =
+            ExtensionType::get_required_init_account_extensions(&mint_extensions);
+        ExtensionType::try_calculate_account_len::<spl_token_2022::state::Account>(
+            &required_extensions,
+        )
+        .map_err(|_| error!(FeeVaultError::MathOverflow))
+    } else {
+        Ok(TokenAccount::LEN)
+    }
 }

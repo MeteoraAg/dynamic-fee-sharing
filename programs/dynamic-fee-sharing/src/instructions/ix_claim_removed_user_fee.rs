@@ -57,8 +57,8 @@ pub fn handle_claim_removed_user_fee(ctx: Context<ClaimRemovedUserFeeCtx>) -> Re
         transfer_from_fee_vault(
             ctx.accounts.fee_vault_authority.to_account_info(),
             &ctx.accounts.token_mint,
-            &ctx.accounts.removed_user_token_vault,
-            &ctx.accounts.user_token_vault,
+            ctx.accounts.removed_user_token_vault.to_account_info(),
+            ctx.accounts.user_token_vault.to_account_info(),
             &ctx.accounts.token_program,
             fee_being_claimed,
         )?;
