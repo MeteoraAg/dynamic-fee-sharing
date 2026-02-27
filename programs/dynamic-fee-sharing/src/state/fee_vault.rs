@@ -168,6 +168,37 @@ impl FeeVault {
         Ok(())
     }
 
+    pub fn validate_and_add_user(&mut self, user_address: &Pubkey, share: u32) -> Result<()> {
+        require!(
+            user_address != &Pubkey::default(),
+            FeeVaultError::InvalidUserAddress
+        );
+
+        require!(share > 0, FeeVaultError::InvalidFeeVaultParameters);
+
+        require!(
+            !self.is_share_holder(user_address),
+            FeeVaultError::InvalidUserAddress
+        );
+
+        let empty_slot = self
+            .users
+            .iter()
+            .position(|user| user.address == Pubkey::default())
+            .ok_or_else(|| FeeVaultError::InvalidNumberOfUsers)?; // already full
+
+        self.users[empty_slot] = UserFee {
+            address: *user_address,
+            share,
+            fee_per_share_checkpoint: self.fee_per_share,
+            ..Default::default()
+        };
+
+        self.total_share = self.total_share.safe_add(share)?;
+
+        Ok(())
+    }
+
     pub fn validate_and_remove_user_and_get_unclaimed_fee(
         &mut self,
         user_address: &Pubkey,

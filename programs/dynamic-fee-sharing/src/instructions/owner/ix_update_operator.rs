@@ -1,6 +1,7 @@
-use crate::{error::FeeVaultError, state::FeeVault};
+use crate::{error::FeeVaultError, event::EvtUpdateOperator, state::FeeVault};
 use anchor_lang::prelude::*;
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct UpdateOperatorCtx<'info> {
     #[account(mut, has_one = owner)]
@@ -22,6 +23,11 @@ pub fn handle_update_operator(ctx: Context<UpdateOperatorCtx>) -> Result<()> {
     );
 
     fee_vault.operator = ctx.accounts.operator.key();
+
+    emit_cpi!(EvtUpdateOperator {
+        fee_vault: ctx.accounts.fee_vault.key(),
+        operator: ctx.accounts.operator.key(),
+    });
 
     Ok(())
 }

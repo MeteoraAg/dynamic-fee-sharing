@@ -34,7 +34,7 @@ pub struct ClaimFeeCtx<'info> {
 pub fn handle_claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {
     let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
     let fee_being_claimed =
-        fee_vault.validate_and_claim_fee(index as usize, &ctx.accounts.user.key())?;
+        fee_vault.validate_and_claim_fee(index.into(), &ctx.accounts.user.key())?;
 
     if fee_being_claimed > 0 {
         transfer_from_fee_vault(

@@ -344,6 +344,45 @@ export async function fundFee(params: {
   ).to.be.true;
 }
 
+export async function addUser(params: {
+  svm: LiteSVM;
+  program: DynamicFeeSharingProgram;
+  feeVault: PublicKey;
+  operator: Keypair;
+  user: PublicKey;
+  share: number;
+}) {
+  const { svm, program, feeVault, operator, user, share } = params;
+
+  const beforeUsersCount = getFeeVault(svm, feeVault).users.filter(
+    (x) => !x.address.equals(PublicKey.default),
+  ).length;
+
+  const tx = await program.methods
+    .addUser(share)
+    .accountsPartial({
+      feeVault,
+      user,
+      signer: operator.publicKey,
+    })
+    .transaction();
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(operator);
+
+  const res = sendTransactionOrExpectThrowError(svm, tx);
+  expect(res instanceof TransactionMetadata).to.be.true;
+
+  const afterUsersCount = getFeeVault(svm, feeVault).users.filter(
+    (x) => !x.address.equals(PublicKey.default),
+  ).length;
+  expect(afterUsersCount - beforeUsersCount).eq(1);
+
+  const userFee = getFeeVault(svm, feeVault).users.find((u) =>
+    u.address.equals(user),
+  );
+  expect(userFee.share).eq(share);
+}
+
 export async function updateUserShare(params: {
   svm: LiteSVM;
   program: DynamicFeeSharingProgram;
@@ -368,10 +407,10 @@ export async function updateUserShare(params: {
   const res = sendTransactionOrExpectThrowError(svm, tx);
   expect(res instanceof TransactionMetadata).to.be.true;
 
-  const feeUser = getFeeVault(svm, feeVault).users.find((u) =>
+  const userFee = getFeeVault(svm, feeVault).users.find((u) =>
     u.address.equals(user),
   );
-  expect(feeUser.share).eq(share);
+  expect(userFee.share).eq(share);
 }
 
 export async function removeUser(params: {

@@ -6,6 +6,7 @@ import {
   SystemProgram,
 } from "@solana/web3.js";
 import {
+  addUser,
   createProgram,
   createToken,
   deriveFeeVaultAuthorityAddress,
@@ -140,7 +141,7 @@ describe("Fee vault sharing", () => {
     expectThrowsErrorCode(svm.sendTransaction(tx), errorCode);
   });
 
-  it("Fail to update user share and remove user when fee vault is not mutable", async () => {
+  it("Fail to update user share, remove user, and add user when fee vault is not mutable", async () => {
     const generatedUser = generateUsers(svm, 5);
     const users = generatedUser.map((item) => ({
       address: item.publicKey,
@@ -221,6 +222,20 @@ describe("Fee vault sharing", () => {
     removeTx.sign(user);
     const removeUserRes = svm.sendTransaction(removeTx);
     expectThrowsErrorCode(removeUserRes, errorCode);
+
+    const newUser = Keypair.generate();
+    const addTx = await program.methods
+      .addUser(500)
+      .accountsPartial({
+        feeVault: feeVault.publicKey,
+        user: newUser.publicKey,
+        signer: user.publicKey,
+      })
+      .transaction();
+    addTx.recentBlockhash = svm.latestBlockhash();
+    addTx.sign(user);
+    const addRes = svm.sendTransaction(addTx);
+    expectThrowsErrorCode(addRes, errorCode);
   });
 
   it("Fail to perform admin task when not an admin", async () => {
@@ -260,6 +275,20 @@ describe("Fee vault sharing", () => {
 
     const errorCode = getProgramErrorCodeHexString("InvalidPermission");
 
+    const newUser = Keypair.generate();
+    const addTx = await program.methods
+      .addUser(500)
+      .accountsPartial({
+        feeVault: feeVault.publicKey,
+        user: newUser.publicKey,
+        signer: user.publicKey,
+      })
+      .transaction();
+    addTx.recentBlockhash = svm.latestBlockhash();
+    addTx.sign(user);
+    const addRes = svm.sendTransaction(addTx);
+    expectThrowsErrorCode(addRes, errorCode);
+
     const updateTx1 = await program.methods
       .updateUserShare(2000)
       .accountsPartial({
@@ -291,6 +320,65 @@ describe("Fee vault sharing", () => {
       user: generatedUser[0].publicKey,
       share: 2000,
     });
+  });
+
+  it("Fail to add 6th user (exceeds MAX_USER)", async () => {
+    const generatedUser = generateUsers(svm, 5);
+    const users = generatedUser.map((item) => ({
+      address: item.publicKey,
+      share: 1000,
+    }));
+
+    const params: InitializeFeeVaultParameters = {
+      mutableFlag: true,
+      padding: [],
+      users,
+    };
+
+    const feeVault = Keypair.generate();
+    const tokenVault = deriveTokenVaultAddress(feeVault.publicKey);
+    const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
+
+    const tx = await program.methods
+      .initializeFeeVault(params)
+      .accountsPartial({
+        feeVault: feeVault.publicKey,
+        feeVaultAuthority,
+        tokenVault,
+        tokenMint,
+        owner: vaultOwner.publicKey,
+        payer: admin.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .transaction();
+
+    tx.recentBlockhash = svm.latestBlockhash();
+    tx.sign(admin, feeVault);
+    const initRes = svm.sendTransaction(tx);
+    expect(initRes instanceof TransactionMetadata).to.be.true;
+
+    await updateOperator({
+      svm,
+      program,
+      feeVault: feeVault.publicKey,
+      operator: user.publicKey,
+      vaultOwner,
+    });
+
+    const errorCode = getProgramErrorCodeHexString("InvalidNumberOfUsers");
+    const newUser = Keypair.generate();
+    const addTx = await program.methods
+      .addUser(500)
+      .accountsPartial({
+        feeVault: feeVault.publicKey,
+        user: newUser.publicKey,
+        signer: user.publicKey,
+      })
+      .transaction();
+    addTx.recentBlockhash = svm.latestBlockhash();
+    addTx.sign(user);
+    const addRes = svm.sendTransaction(addTx);
+    expectThrowsErrorCode(addRes, errorCode);
   });
 
   it("Full flow", async () => {
@@ -595,4 +683,68 @@ async function fullFlow(
   // owner should have received rent back from removed user token vault
   const ownerBalanceAfter = svm.getBalance(vaultOwner.publicKey);
   expect(ownerBalanceAfter > ownerBalanceBefore).to.be.true;
+
+  console.log("add new user after removing user[0]");
+  svm.expireBlockhash();
+  const newUser = Keypair.generate();
+  svm.airdrop(newUser.publicKey, BigInt(LAMPORTS_PER_SOL));
+  await addUser({
+    svm,
+    program,
+    feeVault: feeVault.publicKey,
+    operator,
+    user: newUser.publicKey,
+    share: 1500,
+  });
+
+  const feeVaultAfterAdd = getFeeVault(svm, feeVault.publicKey);
+  const newUserFee = feeVaultAfterAdd.users.find((user) =>
+    user.address.equals(newUser.publicKey),
+  );
+  expect(newUserFee.share).eq(1500);
+  // new user should not earn retroactive fees
+  expect(newUserFee.pendingFee.toNumber()).eq(0);
+  expect(newUserFee.feeClaimed.toNumber()).eq(0);
+
+  console.log("fund fee after adding new user");
+  svm.expireBlockhash();
+  await fundFee({
+    svm,
+    program,
+    funder,
+    fundAmount: new BN(100_000 * 10 ** TOKEN_DECIMALS),
+    feeVault: feeVault.publicKey,
+    tokenMint,
+  });
+
+  console.log("new user claims fee");
+  const newUserIndex = getFeeVault(svm, feeVault.publicKey).users.findIndex(
+    (user) => user.address.equals(newUser.publicKey),
+  );
+  const newUserTokenVault = getOrCreateAtA(
+    svm,
+    newUser,
+    tokenMint,
+    newUser.publicKey,
+  );
+  const beforeNewUserBalance = getTokenBalance(svm, newUserTokenVault);
+  const claimNewUserTx = await program.methods
+    .claimFee(newUserIndex)
+    .accountsPartial({
+      feeVault: feeVault.publicKey,
+      tokenMint,
+      tokenVault,
+      userTokenVault: newUserTokenVault,
+      user: newUser.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .transaction();
+  claimNewUserTx.recentBlockhash = svm.latestBlockhash();
+  claimNewUserTx.sign(newUser);
+
+  const claimNewUserRes = svm.sendTransaction(claimNewUserTx);
+  expect(claimNewUserRes instanceof TransactionMetadata).to.be.true;
+
+  const afterNewUserBalance = getTokenBalance(svm, newUserTokenVault);
+  expect(afterNewUserBalance.sub(beforeNewUserBalance).gtn(0)).to.be.true;
 }

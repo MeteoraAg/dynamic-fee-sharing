@@ -56,6 +56,11 @@ pub mod dynamic_fee_sharing {
     }
 
     #[access_control(verify_is_mutable_and_admin(&ctx.accounts.fee_vault, ctx.accounts.signer.key))]
+    pub fn add_user(ctx: Context<AddUserCtx>, share: u32) -> Result<()> {
+        instructions::handle_add_user(ctx, share)
+    }
+
+    #[access_control(verify_is_mutable_and_admin(&ctx.accounts.fee_vault, ctx.accounts.signer.key))]
     pub fn update_user_share(ctx: Context<UpdateUserShareCtx>, share: u32) -> Result<()> {
         instructions::handle_update_user_share(ctx, share)
     }
