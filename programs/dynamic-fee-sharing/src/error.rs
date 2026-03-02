@@ -40,4 +40,7 @@ pub enum FeeVaultError {
 
     #[msg("Invalid operator address")]
     InvalidOperatorAddress,
+
+    #[msg("Fee vault is not mutable")]
+    FeeVaultNotMutable,
 }
