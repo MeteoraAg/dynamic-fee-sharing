@@ -414,7 +414,7 @@ async function fullFlow(
 
   console.log("fund fee");
 
-  fundFee({
+  await fundFee({
     svm,
     program,
     funder,
@@ -461,7 +461,7 @@ async function fullFlow(
 
   console.log("fund fee before share update");
   svm.expireBlockhash();
-  fundFee({
+  await fundFee({
     svm,
     program,
     funder,
@@ -517,7 +517,7 @@ async function fullFlow(
 
   console.log("fund fee after share update");
   svm.expireBlockhash();
-  fundFee({
+  await fundFee({
     svm,
     program,
     funder,
