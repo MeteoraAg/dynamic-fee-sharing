@@ -1,18 +1,15 @@
 use anchor_lang::{
     prelude::*,
-    solana_program::{program::invoke_signed, system_instruction},
+    solana_program::program::invoke_signed,
 };
 use anchor_spl::{
-    token::{Token, TokenAccount},
-    token_2022::{
-        spl_token_2022::{
-            self,
-            extension::{
-                self, transfer_fee::TransferFee, BaseStateWithExtensions, ExtensionType,
-                StateWithExtensions,
-            },
+    token::Token,
+    token_2022::spl_token_2022::{
+        self,
+        extension::{
+            self, transfer_fee::TransferFee, BaseStateWithExtensions, ExtensionType,
+            StateWithExtensions,
         },
-        Token2022,
     },
     token_interface::{Mint, TokenAccount},
 };
@@ -174,59 +171,3 @@ pub fn transfer_from_fee_vault<'info>(
     Ok(())
 }
 
-pub fn create_pda_token_account<'info>(
-    payer: AccountInfo<'info>,
-    new_account: AccountInfo<'info>,
-    mint: &InterfaceAccount<'info, Mint>,
-    authority: &Pubkey,
-    token_program: &Interface<'info, TokenInterface>,
-    system_program: AccountInfo<'info>,
-    signer_seeds: &[&[u8]],
-) -> Result<()> {
-    let space = get_token_account_space(mint)?;
-    let rent = Rent::get()?;
-    let lamports = rent.minimum_balance(space);
-
-    invoke_signed(
-        &system_instruction::create_account(
-            payer.key,
-            new_account.key,
-            lamports,
-            space as u64,
-            token_program.key,
-        ),
-        &[payer, new_account.clone(), system_program],
-        &[signer_seeds],
-    )?;
-
-    invoke_signed(
-        &spl_token_2022::instruction::initialize_account3(
-            token_program.key,
-            new_account.key,
-            &mint.key(),
-            authority,
-        )?,
-        &[new_account, mint.to_account_info()],
-        &[],
-    )?;
-
-    Ok(())
-}
-
-// refrence https://github.com/solana-foundation/anchor/blob/1ebbe58158d089a2a40b5e35ebead5a10db9090d/lang/syn/src/codegen/accounts/constraints.rs#L1599
-fn get_token_account_space(mint: &InterfaceAccount<Mint>) -> Result<usize> {
-    let mint_info = mint.to_account_info();
-    if *mint_info.owner == Token2022::id() {
-        let mint_data = mint_info.try_borrow_data()?;
-        let unpacked = StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&mint_data)?;
-        let mint_extensions = unpacked.get_extension_types()?;
-        let required_extensions =
-            ExtensionType::get_required_init_account_extensions(&mint_extensions);
-        ExtensionType::try_calculate_account_len::<spl_token_2022::state::Account>(
-            &required_extensions,
-        )
-        .map_err(|_| error!(FeeVaultError::MathOverflow))
-    } else {
-        Ok(TokenAccount::LEN)
-    }
-}

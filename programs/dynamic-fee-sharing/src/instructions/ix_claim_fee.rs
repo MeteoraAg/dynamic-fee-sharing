@@ -23,6 +23,7 @@ pub struct ClaimFeeCtx<'info> {
 
     pub token_mint: Box<InterfaceAccount<'info, Mint>>,
 
+    // token account does not need to be owned by user
     #[account(mut)]
     pub user_token_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 

@@ -71,6 +71,15 @@ impl UserFee {
     }
 }
 
+#[account(zero_copy)]
+#[derive(InitSpace, Debug, Default)]
+pub struct UserUnclaimedFee {
+    pub unclaimed_fee: u64,
+    pub padding: [u8; 32], //  padding for future use
+}
+
+const_assert_eq!(UserUnclaimedFee::INIT_SPACE, 40);
+
 impl FeeVault {
     pub fn initialize(
         &mut self,
@@ -140,24 +149,24 @@ impl FeeVault {
             .any(|share_holder| share_holder.address.eq(signer))
     }
 
-    pub fn validate_and_update_share(&mut self, user_address: &Pubkey, share: u32) -> Result<()> {
+    pub fn validate_and_update_share(
+        &mut self,
+        index: usize,
+        user_address: &Pubkey,
+        share: u32,
+    ) -> Result<()> {
+        let user = self
+            .users
+            .get_mut(index)
+            .ok_or_else(|| FeeVaultError::InvalidUserIndex)?;
         require!(
-            user_address != &Pubkey::default(),
+            user.address.eq(user_address) && user_address.ne(&Pubkey::default()),
             FeeVaultError::InvalidUserAddress
         );
-
-        let index = self
-            .users
-            .iter()
-            .position(|user| user.address.eq(user_address))
-            .ok_or_else(|| FeeVaultError::InvalidUserAddress)?;
-
         require!(
-            share != self.users[index].share,
+            share > 0 && share != user.share,
             FeeVaultError::InvalidFeeVaultParameters
         );
-
-        let user = &mut self.users[index];
 
         self.total_share = self.total_share.safe_sub(user.share)?.safe_add(share)?;
 
@@ -170,21 +179,16 @@ impl FeeVault {
 
     pub fn validate_and_add_user(&mut self, user_address: &Pubkey, share: u32) -> Result<()> {
         require!(
-            user_address != &Pubkey::default(),
+            user_address.ne(&Pubkey::default()) && !self.is_share_holder(user_address),
             FeeVaultError::InvalidUserAddress
         );
 
         require!(share > 0, FeeVaultError::InvalidFeeVaultParameters);
 
-        require!(
-            !self.is_share_holder(user_address),
-            FeeVaultError::InvalidUserAddress
-        );
-
         let empty_slot = self
             .users
             .iter()
-            .position(|user| user.address == Pubkey::default())
+            .position(|user| user.address.eq(&Pubkey::default()))
             .ok_or_else(|| FeeVaultError::InvalidNumberOfUsers)?; // already full
 
         self.users[empty_slot] = UserFee {
@@ -201,17 +205,25 @@ impl FeeVault {
 
     pub fn validate_and_remove_user_and_get_unclaimed_fee(
         &mut self,
+        index: usize,
         user_address: &Pubkey,
     ) -> Result<u64> {
+        let user = self
+            .users
+            .get(index)
+            .ok_or_else(|| FeeVaultError::InvalidUserIndex)?;
         require!(
-            user_address != &Pubkey::default(),
+            user.address.eq(user_address) && user_address.ne(&Pubkey::default()),
             FeeVaultError::InvalidUserAddress
         );
 
-        let (index, user_count) = get_user_index_and_user_count(&self.users, user_address)?;
-
+        let active_user_count = self
+            .users
+            .iter()
+            .filter(|u| u.address.ne(&Pubkey::default()))
+            .count();
         require!(
-            user_count - 1 >= MIN_USER,
+            active_user_count > MIN_USER,
             FeeVaultError::InvalidNumberOfUsers
         );
 
@@ -227,27 +239,4 @@ impl FeeVault {
 
         Ok(unclaimed_fee)
     }
-}
-
-fn get_user_index_and_user_count(
-    users: &[UserFee],
-    user_address: &Pubkey,
-) -> Result<(usize, usize)> {
-    let mut index = None;
-    let mut active_user_count = 0usize;
-
-    for (i, user) in users.iter().enumerate() {
-        if user.address == Pubkey::default() {
-            break;
-        }
-
-        active_user_count += 1;
-
-        if index.is_none() && user.address.eq(user_address) {
-            index = Some(i);
-        }
-    }
-
-    let index = index.ok_or_else(|| FeeVaultError::InvalidUserAddress)?;
-    Ok((index, active_user_count))
 }

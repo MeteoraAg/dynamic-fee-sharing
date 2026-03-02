@@ -41,6 +41,9 @@ pub enum FeeVaultError {
     #[msg("Invalid operator address")]
     InvalidOperatorAddress,
 
+    #[msg("Type cast error")]
+    TypeCastFailed,
+
     #[msg("Fee vault is not mutable")]
     FeeVaultNotMutable,
 }

@@ -39,8 +39,14 @@ impl InitializeFeeVaultParameters {
                 self.users[i].address.ne(&Pubkey::default()),
                 FeeVaultError::InvalidUserAddress
             );
+            // 15 inner loop at most when number_of_users is 5
+            for j in (i + 1)..number_of_users {
+                require!(
+                    self.users[i].address.ne(&self.users[j].address),
+                    FeeVaultError::InvalidUserAddress
+                );
+            }
         }
-        // that is fine to leave user addresses are duplicated?
         Ok(())
     }
 }

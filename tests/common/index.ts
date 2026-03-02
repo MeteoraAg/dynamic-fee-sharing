@@ -88,17 +88,15 @@ export function deriveTokenVaultAddress(feeVault: PublicKey): PublicKey {
   )[0];
 }
 
-export function deriveRemovedUserTokenVaultAddress(
+export function deriveUserUnclaimedFeeAddress(
   feeVault: PublicKey,
-  tokenMint: PublicKey,
   user: PublicKey,
 ): PublicKey {
   const program = createProgram();
   return PublicKey.findProgramAddressSync(
     [
-      Buffer.from("removed_user_token_vault"),
+      Buffer.from("user_unclaimed_fee"),
       feeVault.toBuffer(),
-      tokenMint.toBuffer(),
       user.toBuffer(),
     ],
     program.programId,
@@ -389,12 +387,13 @@ export async function updateUserShare(params: {
   feeVault: PublicKey;
   operator: Keypair;
   user: PublicKey;
+  index: number;
   share: number;
 }) {
-  const { svm, program, feeVault, operator, user, share } = params;
+  const { svm, program, feeVault, operator, user, index, share } = params;
 
   const tx = await program.methods
-    .updateUserShare(share)
+    .updateUserShare(index, share)
     .accountsPartial({
       feeVault,
       user,
@@ -417,17 +416,14 @@ export async function removeUser(params: {
   svm: LiteSVM;
   program: DynamicFeeSharingProgram;
   feeVault: PublicKey;
-  tokenMint: PublicKey;
   signer: Keypair;
   user: PublicKey;
+  index: number;
 }) {
-  const { svm, program, feeVault, tokenMint, signer, user } = params;
+  const { svm, program, feeVault, signer, user, index } = params;
 
-  const tokenVault = deriveTokenVaultAddress(feeVault);
-  const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
-  const removedUserTokenVault = deriveRemovedUserTokenVaultAddress(
+  const userUnclaimedFee = deriveUserUnclaimedFeeAddress(
     feeVault,
-    tokenMint,
     user,
   );
 
@@ -436,16 +432,12 @@ export async function removeUser(params: {
   ).length;
 
   const tx = await program.methods
-    .removeUser()
+    .removeUser(index)
     .accountsPartial({
       feeVault,
-      feeVaultAuthority,
-      tokenVault,
-      tokenMint,
       user,
-      removedUserTokenVault,
+      userUnclaimedFee,
       signer: signer.publicKey,
-      tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
     })
     .transaction();
@@ -460,7 +452,7 @@ export async function removeUser(params: {
   expect(res instanceof TransactionMetadata).to.be.true;
   expect(beforeUsersCount - afterUsersCount).eq(1);
 
-  return removedUserTokenVault;
+  return userUnclaimedFee;
 }
 
 export async function claimRemovedUserFee(params: {
@@ -474,9 +466,9 @@ export async function claimRemovedUserFee(params: {
   const { svm, program, feeVault, tokenMint, user, owner } = params;
 
   const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
-  const removedUserTokenVault = deriveRemovedUserTokenVaultAddress(
+  const tokenVault = deriveTokenVaultAddress(feeVault);
+  const userUnclaimedFee = deriveUserUnclaimedFeeAddress(
     feeVault,
-    tokenMint,
     user.publicKey,
   );
   const userTokenVault = getOrCreateAtA(svm, user, tokenMint, user.publicKey);
@@ -487,7 +479,8 @@ export async function claimRemovedUserFee(params: {
       feeVault,
       feeVaultAuthority,
       tokenMint,
-      removedUserTokenVault,
+      tokenVault,
+      userUnclaimedFee,
       userTokenVault,
       owner,
       user: user.publicKey,

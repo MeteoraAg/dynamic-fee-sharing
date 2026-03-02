@@ -3,14 +3,12 @@ import {
   PublicKey,
   Keypair,
   LAMPORTS_PER_SOL,
-  SystemProgram,
 } from "@solana/web3.js";
 import {
   addUser,
   createProgram,
   createToken,
   deriveFeeVaultAuthorityAddress,
-  deriveRemovedUserTokenVaultAddress,
   deriveTokenVaultAddress,
   DynamicFeeSharingProgram,
   expectThrowsErrorCode,
@@ -141,7 +139,44 @@ describe("Fee vault sharing", () => {
     expectThrowsErrorCode(svm.sendTransaction(tx), errorCode);
   });
 
-  it("Fail to update user share, remove user, and add user when fee vault is not mutable", async () => {
+  it("Fail to create with duplicate user addresses", async () => {
+    const generatedUser = generateUsers(svm, 2);
+    const users = [
+      { address: generatedUser[0].publicKey, share: 1000 },
+      { address: generatedUser[0].publicKey, share: 2000 },
+    ];
+
+    const params: InitializeFeeVaultParameters = {
+      mutableFlag: false,
+      padding: [],
+      users,
+    };
+
+    const feeVault = Keypair.generate();
+    const tokenVault = deriveTokenVaultAddress(feeVault.publicKey);
+    const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
+
+    const tx = await program.methods
+      .initializeFeeVault(params)
+      .accountsPartial({
+        feeVault: feeVault.publicKey,
+        feeVaultAuthority,
+        tokenVault,
+        tokenMint,
+        owner: vaultOwner.publicKey,
+        payer: admin.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .transaction();
+
+    tx.recentBlockhash = svm.latestBlockhash();
+    tx.sign(admin, feeVault);
+
+    const errorCode = getProgramErrorCodeHexString("InvalidUserAddress");
+    expectThrowsErrorCode(svm.sendTransaction(tx), errorCode);
+  });
+
+  it("Fail to update operator when fee vault is not mutable", async () => {
     const generatedUser = generateUsers(svm, 5);
     const users = generatedUser.map((item) => ({
       address: item.publicKey,
@@ -176,66 +211,20 @@ describe("Fee vault sharing", () => {
     const initializeFeeVaultRes = svm.sendTransaction(tx);
     expect(initializeFeeVaultRes instanceof TransactionMetadata).to.be.true;
 
-    await updateOperator({
-      svm,
-      program,
-      feeVault: feeVault.publicKey,
-      operator: user.publicKey,
-      vaultOwner,
-    });
+    const errorCode = getProgramErrorCodeHexString("FeeVaultNotMutable");
 
-    const errorCode = getProgramErrorCodeHexString("InvalidAction");
-
-    const updateTx = await program.methods
-      .updateUserShare(2000)
+    const updateOperatorTx = await program.methods
+      .updateOperator()
       .accountsPartial({
         feeVault: feeVault.publicKey,
-        user: generatedUser[0].publicKey,
-        signer: user.publicKey,
+        operator: user.publicKey,
+        owner: vaultOwner.publicKey,
       })
       .transaction();
-    updateTx.recentBlockhash = svm.latestBlockhash();
-    updateTx.sign(user);
-    const updateUserShareRes = svm.sendTransaction(updateTx);
-    expectThrowsErrorCode(updateUserShareRes, errorCode);
-
-    const removedUserTokenVault = deriveRemovedUserTokenVaultAddress(
-      feeVault.publicKey,
-      tokenMint,
-      generatedUser[0].publicKey,
-    );
-    const removeTx = await program.methods
-      .removeUser()
-      .accountsPartial({
-        feeVault: feeVault.publicKey,
-        feeVaultAuthority,
-        tokenVault,
-        tokenMint,
-        user: generatedUser[0].publicKey,
-        removedUserTokenVault,
-        signer: user.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SystemProgram.programId,
-      })
-      .transaction();
-    removeTx.recentBlockhash = svm.latestBlockhash();
-    removeTx.sign(user);
-    const removeUserRes = svm.sendTransaction(removeTx);
-    expectThrowsErrorCode(removeUserRes, errorCode);
-
-    const newUser = Keypair.generate();
-    const addTx = await program.methods
-      .addUser(500)
-      .accountsPartial({
-        feeVault: feeVault.publicKey,
-        user: newUser.publicKey,
-        signer: user.publicKey,
-      })
-      .transaction();
-    addTx.recentBlockhash = svm.latestBlockhash();
-    addTx.sign(user);
-    const addRes = svm.sendTransaction(addTx);
-    expectThrowsErrorCode(addRes, errorCode);
+    updateOperatorTx.recentBlockhash = svm.latestBlockhash();
+    updateOperatorTx.sign(vaultOwner);
+    const updateOperatorRes = svm.sendTransaction(updateOperatorTx);
+    expectThrowsErrorCode(updateOperatorRes, errorCode);
   });
 
   it("Fail to perform admin task when not an admin", async () => {
@@ -290,7 +279,7 @@ describe("Fee vault sharing", () => {
     expectThrowsErrorCode(addRes, errorCode);
 
     const updateTx1 = await program.methods
-      .updateUserShare(2000)
+      .updateUserShare(0, 2000)
       .accountsPartial({
         feeVault: feeVault.publicKey,
         user: generatedUser[0].publicKey,
@@ -318,6 +307,7 @@ describe("Fee vault sharing", () => {
       feeVault: feeVault.publicKey,
       operator: user,
       user: generatedUser[0].publicKey,
+      index: 0,
       share: 2000,
     });
   });
@@ -536,6 +526,7 @@ async function fullFlow(
     feeVault: feeVault.publicKey,
     operator,
     user: users[0].publicKey,
+    index: 0,
     share: 2000,
   });
 
@@ -634,21 +625,25 @@ async function fullFlow(
   const beforeFeePerShare = getFeeVault(svm, feeVault.publicKey).feePerShare;
 
   console.log("remove user");
-  const removedUserTokenVault = await removeUser({
+  const userUnclaimedFee = await removeUser({
     svm,
     program,
     feeVault: feeVault.publicKey,
-    tokenMint,
     signer: operator,
     user: users[0].publicKey,
+    index: 0,
   });
 
   const afterFeePerShare = getFeeVault(svm, feeVault.publicKey).feePerShare;
 
   // fee_per_share should NOT increase
   expect(afterFeePerShare.eq(beforeFeePerShare)).to.be.true;
-  // unclaimed fees are transferred to removed user's PDA token account
-  const removedUserBalance = getTokenBalance(svm, removedUserTokenVault);
+  // unclaimed fees are recorded in the removed user's fee record account
+  const userUnclaimedFeeAccount = svm.getAccount(userUnclaimedFee);
+  const removedUserBalance = new BN(
+    userUnclaimedFeeAccount.data.slice(8, 16),
+    "le",
+  );
   expect(removedUserBalance.gtn(0)).to.be.true;
 
   console.log("claim removed user fee");
@@ -677,8 +672,8 @@ async function fullFlow(
   expect(userTokenAfter.sub(userTokenBefore).eq(removedUserBalance)).to.be.true;
 
   // removed user token vault PDA should be closed
-  const closedRemovedUserTokenVault = svm.getAccount(removedUserTokenVault);
-  expect(closedRemovedUserTokenVault.lamports).eq(0);
+  const closedUserUnclaimedFee = svm.getAccount(userUnclaimedFee);
+  expect(closedUserUnclaimedFee.lamports).eq(0);
 
   // owner should have received rent back from removed user token vault
   const ownerBalanceAfter = svm.getBalance(vaultOwner.publicKey);
