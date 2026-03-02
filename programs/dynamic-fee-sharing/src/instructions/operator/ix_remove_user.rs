@@ -34,7 +34,8 @@ pub struct RemoveUserCtx<'info> {
 pub fn handle_remove_user(ctx: Context<RemoveUserCtx>, index: u8) -> Result<()> {
     let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
     let user = ctx.accounts.user.key();
-    let unclaimed_fee = fee_vault.validate_and_remove_user_and_get_unclaimed_fee(index.into(), &user)?;
+    let unclaimed_fee =
+        fee_vault.validate_and_remove_user_and_get_unclaimed_fee(index.into(), &user)?;
 
     if unclaimed_fee > 0 {
         let user_unclaimed_fee = &ctx.accounts.user_unclaimed_fee;

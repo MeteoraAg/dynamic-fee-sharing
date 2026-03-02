@@ -1,7 +1,4 @@
-use anchor_lang::{
-    prelude::*,
-    solana_program::program::invoke_signed,
-};
+use anchor_lang::{prelude::*, solana_program::program::invoke_signed};
 use anchor_spl::{
     token::Token,
     token_2022::spl_token_2022::{
@@ -170,4 +167,3 @@ pub fn transfer_from_fee_vault<'info>(
 
     Ok(())
 }
-
