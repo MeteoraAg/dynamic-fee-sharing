@@ -54,7 +54,6 @@ describe("Funding by claiming in DBC", () => {
       vaultOwner.publicKey,
       quoteMint,
       {
-        mutableFlag: false,
         padding: [],
         users: [
           {
@@ -114,7 +113,6 @@ describe("Funding by claiming in DBC", () => {
       vaultOwner.publicKey,
       quoteMint,
       {
-        mutableFlag: false,
         padding: [],
         users: [
           {
@@ -175,7 +173,6 @@ describe("Funding by claiming in DBC", () => {
       vaultOwner.publicKey,
       quoteMint,
       {
-        mutableFlag: false,
         padding: [],
         users: [
           {
@@ -235,7 +232,6 @@ describe("Funding by claiming in DBC", () => {
       vaultOwner.publicKey,
       quoteMint,
       {
-        mutableFlag: false,
         padding: [],
         users: [
           {
@@ -295,7 +291,6 @@ describe("Funding by claiming in DBC", () => {
       vaultOwner.publicKey,
       quoteMint,
       {
-        mutableFlag: false,
         padding: [],
         users: [
           {

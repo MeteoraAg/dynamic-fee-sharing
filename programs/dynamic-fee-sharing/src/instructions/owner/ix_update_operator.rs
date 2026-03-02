@@ -17,11 +17,6 @@ pub fn handle_update_operator(ctx: Context<UpdateOperatorCtx>) -> Result<()> {
     let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
 
     require!(
-        fee_vault.mutable_flag == 1,
-        FeeVaultError::FeeVaultNotMutable
-    );
-
-    require!(
         ctx.accounts.operator.key() != fee_vault.operator
             && ctx.accounts.operator.key() != fee_vault.owner,
         FeeVaultError::InvalidOperatorAddress

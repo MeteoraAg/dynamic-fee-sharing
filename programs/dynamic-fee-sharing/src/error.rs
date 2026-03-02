@@ -43,7 +43,4 @@ pub enum FeeVaultError {
 
     #[msg("Type cast error")]
     TypeCastFailed,
-
-    #[msg("Fee vault is not mutable")]
-    FeeVaultNotMutable,
 }

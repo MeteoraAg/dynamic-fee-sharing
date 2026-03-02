@@ -1,6 +1,6 @@
 use crate::const_pda;
 use crate::constants::seeds::USER_UNCLAIMED_FEE_PREFIX;
-use crate::event::EvtClaimRemovedUserFee;
+use crate::event::EvtClaimUnclaimedFee;
 use crate::state::{FeeVault, UserUnclaimedFee};
 use crate::utils::token::transfer_from_fee_vault;
 use anchor_lang::prelude::*;
@@ -8,7 +8,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct ClaimRemovedUserFeeCtx<'info> {
+pub struct ClaimUnclaimedFeeCtx<'info> {
     #[account(has_one = token_mint, has_one = owner, has_one = token_vault)]
     pub fee_vault: AccountLoader<'info, FeeVault>,
 
@@ -46,7 +46,8 @@ pub struct ClaimRemovedUserFeeCtx<'info> {
     pub token_program: Interface<'info, TokenInterface>,
 }
 
-pub fn handle_claim_removed_user_fee(ctx: Context<ClaimRemovedUserFeeCtx>) -> Result<()> {
+// when a user is removed from a fee vault, they may claim any unclaimed fee that they have earned before the removal
+pub fn handle_claim_unclaimed_fee(ctx: Context<ClaimUnclaimedFeeCtx>) -> Result<()> {
     let user_unclaimed_fee = ctx.accounts.user_unclaimed_fee.load()?;
     let fee_being_claimed = user_unclaimed_fee.unclaimed_fee;
 
@@ -61,7 +62,7 @@ pub fn handle_claim_removed_user_fee(ctx: Context<ClaimRemovedUserFeeCtx>) -> Re
         )?;
     }
 
-    emit_cpi!(EvtClaimRemovedUserFee {
+    emit_cpi!(EvtClaimUnclaimedFee {
         fee_vault: ctx.accounts.fee_vault.key(),
         user: ctx.accounts.user.key(),
         claimed_fee: fee_being_claimed,

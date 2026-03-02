@@ -51,21 +51,25 @@ pub mod dynamic_fee_sharing {
         instructions::handle_update_operator(ctx)
     }
 
-    pub fn claim_removed_user_fee(ctx: Context<ClaimRemovedUserFeeCtx>) -> Result<()> {
-        instructions::handle_claim_removed_user_fee(ctx)
+    pub fn claim_unclaimed_fee(ctx: Context<ClaimUnclaimedFeeCtx>) -> Result<()> {
+        instructions::handle_claim_unclaimed_fee(ctx)
     }
 
-    #[access_control(verify_is_mutable_and_admin(&ctx.accounts.fee_vault, ctx.accounts.signer.key))]
+    #[access_control(verify_is_admin(&ctx.accounts.fee_vault, ctx.accounts.signer.key))]
     pub fn add_user(ctx: Context<AddUserCtx>, share: u32) -> Result<()> {
         instructions::handle_add_user(ctx, share)
     }
 
-    #[access_control(verify_is_mutable_and_admin(&ctx.accounts.fee_vault, ctx.accounts.signer.key))]
-    pub fn update_user_share(ctx: Context<UpdateUserShareCtx>, index: u8, share: u32) -> Result<()> {
+    #[access_control(verify_is_admin(&ctx.accounts.fee_vault, ctx.accounts.signer.key))]
+    pub fn update_user_share(
+        ctx: Context<UpdateUserShareCtx>,
+        index: u8,
+        share: u32,
+    ) -> Result<()> {
         instructions::handle_update_user_share(ctx, index, share)
     }
 
-    #[access_control(verify_is_mutable_and_admin(&ctx.accounts.fee_vault, ctx.accounts.signer.key))]
+    #[access_control(verify_is_admin(&ctx.accounts.fee_vault, ctx.accounts.signer.key))]
     pub fn remove_user(ctx: Context<RemoveUserCtx>, index: u8) -> Result<()> {
         instructions::handle_remove_user(ctx, index)
     }

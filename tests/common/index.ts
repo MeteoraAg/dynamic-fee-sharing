@@ -94,11 +94,7 @@ export function deriveUserUnclaimedFeeAddress(
 ): PublicKey {
   const program = createProgram();
   return PublicKey.findProgramAddressSync(
-    [
-      Buffer.from("user_unclaimed_fee"),
-      feeVault.toBuffer(),
-      user.toBuffer(),
-    ],
+    [Buffer.from("user_unclaimed_fee"), feeVault.toBuffer(), user.toBuffer()],
     program.programId,
   )[0];
 }
@@ -422,10 +418,7 @@ export async function removeUser(params: {
 }) {
   const { svm, program, feeVault, signer, user, index } = params;
 
-  const userUnclaimedFee = deriveUserUnclaimedFeeAddress(
-    feeVault,
-    user,
-  );
+  const userUnclaimedFee = deriveUserUnclaimedFeeAddress(feeVault, user);
 
   const beforeUsersCount = getFeeVault(svm, feeVault).users.filter(
     (x) => !x.address.equals(PublicKey.default),
@@ -455,7 +448,7 @@ export async function removeUser(params: {
   return userUnclaimedFee;
 }
 
-export async function claimRemovedUserFee(params: {
+export async function claimUnclaimedFee(params: {
   svm: LiteSVM;
   program: DynamicFeeSharingProgram;
   feeVault: PublicKey;
@@ -474,7 +467,7 @@ export async function claimRemovedUserFee(params: {
   const userTokenVault = getOrCreateAtA(svm, user, tokenMint, user.publicKey);
 
   const tx = await program.methods
-    .claimRemovedUserFee()
+    .claimUnclaimedFee()
     .accountsPartial({
       feeVault,
       feeVaultAuthority,

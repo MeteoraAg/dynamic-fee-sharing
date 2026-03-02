@@ -12,8 +12,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct InitializeFeeVaultParameters {
-    pub padding: [u8; 63], // for future use
-    pub mutable_flag: bool,
+    pub padding: [u8; 64], // for future use
     pub users: Vec<UserShare>,
 }
 
@@ -115,7 +114,6 @@ pub fn handle_initialize_fee_vault(
         &Pubkey::default(),
         0,
         FeeVaultType::NonPdaAccount.into(),
-        params.mutable_flag.into(),
     )?;
 
     emit_cpi!(EvtInitializeFeeVault {
@@ -138,7 +136,6 @@ pub fn create_fee_vault<'info>(
     base: &Pubkey,
     fee_vault_bump: u8,
     fee_vault_type: u8,
-    mutable_flag: u8,
 ) -> Result<()> {
     require!(is_supported_mint(&token_mint)?, FeeVaultError::InvalidMint);
 
@@ -154,7 +151,6 @@ pub fn create_fee_vault<'info>(
         fee_vault_bump,
         fee_vault_type,
         &params.users,
-        mutable_flag,
     )?;
     Ok(())
 }

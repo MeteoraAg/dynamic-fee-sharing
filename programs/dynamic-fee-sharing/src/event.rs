@@ -50,7 +50,7 @@ pub struct EvtRemoveUser {
 }
 
 #[event]
-pub struct EvtClaimRemovedUserFee {
+pub struct EvtClaimUnclaimedFee {
     pub fee_vault: Pubkey,
     pub user: Pubkey,
     pub claimed_fee: u64,

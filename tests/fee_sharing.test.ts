@@ -1,9 +1,5 @@
 import { LiteSVM, TransactionMetadata } from "litesvm";
-import {
-  PublicKey,
-  Keypair,
-  LAMPORTS_PER_SOL,
-} from "@solana/web3.js";
+import { PublicKey, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import {
   addUser,
   createProgram,
@@ -19,7 +15,7 @@ import {
   getProgramErrorCodeHexString,
   InitializeFeeVaultParameters,
   mintToken,
-  claimRemovedUserFee,
+  claimUnclaimedFee,
   removeUser,
   TOKEN_DECIMALS,
   updateOperator,
@@ -77,7 +73,6 @@ describe("Fee vault sharing", () => {
     });
 
     const params: InitializeFeeVaultParameters = {
-      mutableFlag: false,
       padding: [],
       users,
     };
@@ -110,7 +105,6 @@ describe("Fee vault sharing", () => {
     const users = [];
 
     const params: InitializeFeeVaultParameters = {
-      mutableFlag: false,
       padding: [],
       users,
     };
@@ -147,7 +141,6 @@ describe("Fee vault sharing", () => {
     ];
 
     const params: InitializeFeeVaultParameters = {
-      mutableFlag: false,
       padding: [],
       users,
     };
@@ -176,57 +169,6 @@ describe("Fee vault sharing", () => {
     expectThrowsErrorCode(svm.sendTransaction(tx), errorCode);
   });
 
-  it("Fail to update operator when fee vault is not mutable", async () => {
-    const generatedUser = generateUsers(svm, 5);
-    const users = generatedUser.map((item) => ({
-      address: item.publicKey,
-      share: 1000,
-    }));
-
-    const params: InitializeFeeVaultParameters = {
-      mutableFlag: false,
-      padding: [],
-      users,
-    };
-
-    const feeVault = Keypair.generate();
-    const tokenVault = deriveTokenVaultAddress(feeVault.publicKey);
-    const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
-
-    const tx = await program.methods
-      .initializeFeeVault(params)
-      .accountsPartial({
-        feeVault: feeVault.publicKey,
-        feeVaultAuthority,
-        tokenVault,
-        tokenMint,
-        owner: vaultOwner.publicKey,
-        payer: admin.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .transaction();
-
-    tx.recentBlockhash = svm.latestBlockhash();
-    tx.sign(admin, feeVault);
-    const initializeFeeVaultRes = svm.sendTransaction(tx);
-    expect(initializeFeeVaultRes instanceof TransactionMetadata).to.be.true;
-
-    const errorCode = getProgramErrorCodeHexString("FeeVaultNotMutable");
-
-    const updateOperatorTx = await program.methods
-      .updateOperator()
-      .accountsPartial({
-        feeVault: feeVault.publicKey,
-        operator: user.publicKey,
-        owner: vaultOwner.publicKey,
-      })
-      .transaction();
-    updateOperatorTx.recentBlockhash = svm.latestBlockhash();
-    updateOperatorTx.sign(vaultOwner);
-    const updateOperatorRes = svm.sendTransaction(updateOperatorTx);
-    expectThrowsErrorCode(updateOperatorRes, errorCode);
-  });
-
   it("Fail to perform admin task when not an admin", async () => {
     const generatedUser = generateUsers(svm, 5);
     const users = generatedUser.map((item) => ({
@@ -235,7 +177,6 @@ describe("Fee vault sharing", () => {
     }));
 
     const params: InitializeFeeVaultParameters = {
-      mutableFlag: true,
       padding: [],
       users,
     };
@@ -320,7 +261,6 @@ describe("Fee vault sharing", () => {
     }));
 
     const params: InitializeFeeVaultParameters = {
-      mutableFlag: true,
       padding: [],
       users,
     };
@@ -381,7 +321,6 @@ describe("Fee vault sharing", () => {
     });
 
     const params: InitializeFeeVaultParameters = {
-      mutableFlag: true,
       padding: [],
       users,
     };
@@ -646,7 +585,7 @@ async function fullFlow(
   );
   expect(removedUserBalance.gtn(0)).to.be.true;
 
-  console.log("claim removed user fee");
+  console.log("claim unclaimed fee");
   svm.expireBlockhash();
   const ownerBalanceBefore = svm.getBalance(vaultOwner.publicKey);
   const userTokenBefore = getTokenBalance(
@@ -654,7 +593,7 @@ async function fullFlow(
     getOrCreateAtA(svm, users[0], tokenMint, users[0].publicKey),
   );
 
-  const claimRes = await claimRemovedUserFee({
+  const claimRes = await claimUnclaimedFee({
     svm,
     program,
     feeVault: feeVault.publicKey,

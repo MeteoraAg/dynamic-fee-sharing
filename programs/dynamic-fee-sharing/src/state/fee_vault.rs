@@ -33,8 +33,7 @@ pub struct FeeVault {
     pub token_flag: u8, // indicate whether token is spl-token or token2022
     pub fee_vault_type: u8,
     pub fee_vault_bump: u8,
-    pub mutable_flag: u8, // indicate whether the fee vault is mutable by admin or operator, 0 or 1 only
-    pub padding_0: [u8; 12],
+    pub padding_0: [u8; 13],
     pub total_share: u32,
     pub padding_1: [u8; 4],
     pub total_funded_fee: u64,
@@ -91,7 +90,6 @@ impl FeeVault {
         fee_vault_bump: u8,
         fee_vault_type: u8,
         users: &[UserShare],
-        mutable_flag: u8,
     ) -> Result<()> {
         self.owner = *owner;
         self.token_flag = token_flag;
@@ -111,7 +109,6 @@ impl FeeVault {
         self.fee_vault_bump = fee_vault_bump;
         self.fee_vault_type = fee_vault_type;
         self.operator = Pubkey::default();
-        self.mutable_flag = mutable_flag;
 
         Ok(())
     }
@@ -217,15 +214,12 @@ impl FeeVault {
             FeeVaultError::InvalidUserAddress
         );
 
-        let active_user_count = self
+        let user_count = self
             .users
             .iter()
             .filter(|u| u.address.ne(&Pubkey::default()))
             .count();
-        require!(
-            active_user_count > MIN_USER,
-            FeeVaultError::InvalidNumberOfUsers
-        );
+        require!(user_count > MIN_USER, FeeVaultError::InvalidNumberOfUsers);
 
         let unclaimed_fee = self.users[index].get_total_pending_fee(self.fee_per_share)?;
 
