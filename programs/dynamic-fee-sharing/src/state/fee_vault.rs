@@ -175,6 +175,7 @@ impl FeeVault {
     }
 
     pub fn validate_and_add_user(&mut self, user_address: &Pubkey, share: u32) -> Result<()> {
+        // prevent adding duplicate user
         require!(
             user_address.ne(&Pubkey::default()) && !self.is_share_holder(user_address),
             FeeVaultError::InvalidUserAddress
