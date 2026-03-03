@@ -43,4 +43,7 @@ pub enum FeeVaultError {
 
     #[msg("Type cast error")]
     TypeCastFailed,
+
+    #[msg("Invalid account discriminator")]
+    InvalidDiscriminator,
 }

@@ -2,7 +2,7 @@ use crate::constants::seeds::USER_UNCLAIMED_FEE_PREFIX;
 use crate::event::EvtRemoveUser;
 use crate::math::SafeMath;
 use crate::state::{FeeVault, UserUnclaimedFee};
-use crate::utils::account::create_pda_account_with_anchor_discriminator;
+use crate::utils::account::{create_pda_account_with_anchor_discriminator, load_account_data_mut};
 use anchor_lang::prelude::*;
 
 #[event_cpi]
@@ -59,7 +59,7 @@ pub fn handle_remove_user(ctx: Context<RemoveUserCtx>, index: u8) -> Result<()> 
 
         let mut data = user_unclaimed_fee.try_borrow_mut_data()?;
 
-        let user_unclaimed_fee = bytemuck::from_bytes_mut::<UserUnclaimedFee>(&mut data[8..]);
+        let user_unclaimed_fee = load_account_data_mut::<UserUnclaimedFee>(&mut data)?;
         user_unclaimed_fee.unclaimed_fee =
             user_unclaimed_fee.unclaimed_fee.safe_add(unclaimed_fee)?;
     }

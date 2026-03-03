@@ -220,11 +220,12 @@ impl FeeVault {
             .iter()
             .filter(|u| u.address.ne(&Pubkey::default()))
             .count();
+        // user_count include the user being removed. after removal user count should be at least MIN_USER
         require!(user_count > MIN_USER, FeeVaultError::InvalidNumberOfUsers);
 
-        let unclaimed_fee = self.users[index].get_total_pending_fee(self.fee_per_share)?;
+        let unclaimed_fee = user.get_total_pending_fee(self.fee_per_share)?;
 
-        self.total_share = self.total_share.safe_sub(self.users[index].share)?;
+        self.total_share = self.total_share.safe_sub(user.share)?;
 
         // shift users to the left
         for i in index..MAX_USER - 1 {
