@@ -1,4 +1,4 @@
-use crate::error::FeeVaultError;
+use anchor_lang::error::ErrorCode;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::{invoke, invoke_signed};
 use anchor_lang::solana_program::system_instruction;
@@ -88,11 +88,16 @@ pub fn create_pda_account_with_anchor_discriminator<'a, T: Discriminator + Space
     Ok(())
 }
 
-/// Validates the Anchor discriminator and returns a mutable bytemuck reference.
-pub fn load_account_data_mut<T: Discriminator + bytemuck::Pod>(
-    data: &mut [u8],
-) -> Result<&mut T> {
+/// Validates the account owner and Anchor discriminator, then returns a mutable bytemuck reference.
+pub fn validate_and_load_account_data_mut<'a, T: Discriminator + Owner + bytemuck::Pod>(
+    owner: &Pubkey,
+    data: &'a mut [u8],
+) -> Result<&'a mut T> {
+    require!(*owner == T::owner(), ErrorCode::AccountOwnedByWrongProgram);
     let (disc, rest) = data.split_at_mut(T::DISCRIMINATOR.len());
-    require!(disc == T::DISCRIMINATOR, FeeVaultError::InvalidDiscriminator);
+    require!(
+        disc == T::DISCRIMINATOR,
+        ErrorCode::AccountDiscriminatorMismatch
+    );
     Ok(bytemuck::from_bytes_mut::<T>(rest))
 }
