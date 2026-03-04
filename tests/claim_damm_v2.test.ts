@@ -70,6 +70,7 @@ describe("Fund by claiming damm v2", () => {
       tokenBMint,
       {
         padding: [],
+        mutableFlag: false,
         users: [
           {
             address: shareHolder.publicKey,
@@ -145,6 +146,7 @@ describe("Fund by claiming damm v2", () => {
       rewardMint,
       {
         padding: [],
+        mutableFlag: false,
         users: [
           {
             address: shareHolder.publicKey,

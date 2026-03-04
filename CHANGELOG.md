@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add a new field `mutable_flag` to `FeeVault` to indicate its mutability
 - Add a new field `operator` to `FeeVault`. The `operator` and vault owner can perform admin instructions on `FeeVault`
 - Add a new owner endpoint `update_operator` for vault owner to update the operator field
 - Add a new admin endpoint `add_user` to add a user to a `FeeVault`

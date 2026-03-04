@@ -55,6 +55,7 @@ describe("Funding by claiming in DBC", () => {
       quoteMint,
       {
         padding: [],
+        mutableFlag: false,
         users: [
           {
             address: shareHolder.publicKey,
@@ -114,6 +115,7 @@ describe("Funding by claiming in DBC", () => {
       quoteMint,
       {
         padding: [],
+        mutableFlag: false,
         users: [
           {
             address: shareHolder.publicKey,
@@ -174,6 +176,7 @@ describe("Funding by claiming in DBC", () => {
       quoteMint,
       {
         padding: [],
+        mutableFlag: false,
         users: [
           {
             address: shareHolder.publicKey,
@@ -233,6 +236,7 @@ describe("Funding by claiming in DBC", () => {
       quoteMint,
       {
         padding: [],
+        mutableFlag: false,
         users: [
           {
             address: shareHolder.publicKey,
@@ -292,6 +296,7 @@ describe("Funding by claiming in DBC", () => {
       quoteMint,
       {
         padding: [],
+        mutableFlag: false,
         users: [
           {
             address: shareHolder.publicKey,
