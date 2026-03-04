@@ -40,7 +40,7 @@ pub struct FeeVault {
     pub total_funded_fee: u64,
     pub fee_per_share: u128,
     pub base: Pubkey,
-    pub operator: Pubkey,
+    pub operator: Pubkey, // operator is the account that can update a mutable fee vault. default: owner
     pub padding: [u128; 2],
     pub users: [UserFee; MAX_USER],
 }
@@ -70,15 +70,6 @@ impl UserFee {
         Ok(total_pending_fee)
     }
 }
-
-#[account(zero_copy)]
-#[derive(InitSpace, Debug, Default)]
-pub struct UserUnclaimedFee {
-    pub unclaimed_fee: u64,
-    pub padding: [u8; 32], //  padding for future use
-}
-
-const_assert_eq!(UserUnclaimedFee::INIT_SPACE, 40);
 
 impl FeeVault {
     pub fn initialize(
@@ -110,7 +101,7 @@ impl FeeVault {
         self.base = *base;
         self.fee_vault_bump = fee_vault_bump;
         self.fee_vault_type = fee_vault_type;
-        self.operator = Pubkey::default();
+        self.operator = *owner;
         self.mutable_flag = mutable_flag;
 
         Ok(())
@@ -163,12 +154,13 @@ impl FeeVault {
             user.address.eq(user_address) && user_address.ne(&Pubkey::default()),
             FeeVaultError::InvalidUserAddress
         );
-        require!(
-            share > 0 && share != user.share,
-            FeeVaultError::InvalidFeeVaultParameters
-        );
 
         self.total_share = self.total_share.safe_sub(user.share)?.safe_add(share)?;
+
+        require!(
+            self.total_share > 0, // prevent total_share from going to 0
+            FeeVaultError::InvalidFeeVaultParameters
+        );
 
         user.pending_fee = user.get_total_pending_fee(self.fee_per_share)?;
         user.fee_per_share_checkpoint = self.fee_per_share;
@@ -183,8 +175,6 @@ impl FeeVault {
             user_address.ne(&Pubkey::default()) && !self.is_share_holder(user_address),
             FeeVaultError::InvalidUserAddress
         );
-
-        require!(share > 0, FeeVaultError::InvalidFeeVaultParameters);
 
         let empty_slot = self
             .users

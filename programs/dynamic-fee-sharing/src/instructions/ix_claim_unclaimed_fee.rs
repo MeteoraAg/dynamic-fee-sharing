@@ -60,13 +60,13 @@ pub fn handle_claim_unclaimed_fee(ctx: Context<ClaimUnclaimedFeeCtx>) -> Result<
             &ctx.accounts.token_program,
             fee_being_claimed,
         )?;
-    }
 
-    emit_cpi!(EvtClaimUnclaimedFee {
-        fee_vault: ctx.accounts.fee_vault.key(),
-        user: ctx.accounts.user.key(),
-        claimed_fee: fee_being_claimed,
-    });
+        emit_cpi!(EvtClaimUnclaimedFee {
+            fee_vault: ctx.accounts.fee_vault.key(),
+            user: ctx.accounts.user.key(),
+            claimed_fee: fee_being_claimed,
+        });
+    }
 
     Ok(())
 }

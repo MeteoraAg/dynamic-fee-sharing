@@ -1,6 +1,5 @@
 use crate::constants::seeds::USER_UNCLAIMED_FEE_PREFIX;
 use crate::event::EvtRemoveUser;
-use crate::math::SafeMath;
 use crate::state::{FeeVault, UserUnclaimedFee};
 use crate::utils::account::{
     create_pda_account_with_anchor_discriminator, validate_and_load_account_data_mut,
@@ -40,16 +39,16 @@ pub fn handle_remove_user(ctx: Context<RemoveUserCtx>, index: u8) -> Result<()> 
         fee_vault.validate_and_remove_user_and_get_unclaimed_fee(index.into(), &user)?;
 
     if unclaimed_fee > 0 {
-        let user_unclaimed_fee = &ctx.accounts.user_unclaimed_fee;
+        let user_unclaimed_fee_account = &ctx.accounts.user_unclaimed_fee;
+        let fee_vault_key = ctx.accounts.fee_vault.key();
 
-        if user_unclaimed_fee.data_is_empty() {
-            let fee_vault_key = ctx.accounts.fee_vault.key();
+        if user_unclaimed_fee_account.data_is_empty() {
             let bump = ctx.bumps.user_unclaimed_fee;
 
             create_pda_account_with_anchor_discriminator::<UserUnclaimedFee>(
                 &ctx.accounts.signer.to_account_info(),
                 &ctx.accounts.system_program.to_account_info(),
-                &user_unclaimed_fee.to_account_info(),
+                &user_unclaimed_fee_account.to_account_info(),
                 &[
                     USER_UNCLAIMED_FEE_PREFIX,
                     fee_vault_key.as_ref(),
@@ -59,14 +58,12 @@ pub fn handle_remove_user(ctx: Context<RemoveUserCtx>, index: u8) -> Result<()> 
             )?;
         }
 
-        let mut data = user_unclaimed_fee.try_borrow_mut_data()?;
-
+        let mut data = user_unclaimed_fee_account.try_borrow_mut_data()?;
         let user_unclaimed_fee = validate_and_load_account_data_mut::<UserUnclaimedFee>(
-            user_unclaimed_fee.owner,
+            user_unclaimed_fee_account.owner,
             &mut data,
         )?;
-        user_unclaimed_fee.unclaimed_fee =
-            user_unclaimed_fee.unclaimed_fee.safe_add(unclaimed_fee)?;
+        user_unclaimed_fee.initialize_and_add_unclaimed_fee(user, fee_vault_key, unclaimed_fee)?;
     }
 
     emit_cpi!(EvtRemoveUser {

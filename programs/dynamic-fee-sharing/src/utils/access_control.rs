@@ -12,7 +12,7 @@ pub fn verify_is_mutable_and_operator<'info>(
         FeeVaultError::FeeVaultNotMutable
     );
     require!(
-        fee_vault.owner.eq(signer) || fee_vault.operator.eq(signer),
+        fee_vault.operator.eq(signer),
         FeeVaultError::InvalidPermission,
     );
     Ok(())
