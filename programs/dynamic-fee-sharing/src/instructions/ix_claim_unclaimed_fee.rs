@@ -9,7 +9,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 #[event_cpi]
 #[derive(Accounts)]
 pub struct ClaimUnclaimedFeeCtx<'info> {
-    #[account(has_one = token_mint, has_one = owner, has_one = token_vault)]
+    #[account(has_one = token_mint, has_one = operator, has_one = token_vault)]
     pub fee_vault: AccountLoader<'info, FeeVault>,
 
     /// CHECK: fee vault authority
@@ -23,7 +23,7 @@ pub struct ClaimUnclaimedFeeCtx<'info> {
 
     #[account(
         mut,
-        close = owner,
+        close = operator,
         seeds = [
             USER_UNCLAIMED_FEE_PREFIX,
             fee_vault.key().as_ref(),
@@ -37,9 +37,9 @@ pub struct ClaimUnclaimedFeeCtx<'info> {
     #[account(mut)]
     pub user_token_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    /// CHECK: fee vault owner, receives rent from closed account
+    /// CHECK: fee vault operator, receives rent from closed account
     #[account(mut)]
-    pub owner: UncheckedAccount<'info>,
+    pub operator: UncheckedAccount<'info>,
 
     pub user: Signer<'info>,
 

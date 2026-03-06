@@ -644,7 +644,7 @@ async function fullFlow(
 
   console.log("claim unclaimed fee");
   svm.expireBlockhash();
-  const ownerBalanceBefore = svm.getBalance(vaultOwner.publicKey);
+  const operatorBalanceBefore = svm.getBalance(operator.publicKey);
   const userTokenBefore = getTokenBalance(
     svm,
     getOrCreateAtA(svm, users[0], tokenMint, users[0].publicKey),
@@ -656,7 +656,7 @@ async function fullFlow(
     feeVault: feeVault.publicKey,
     tokenMint,
     user: users[0],
-    owner: vaultOwner.publicKey,
+    operator: operator.publicKey,
   });
   expect(claimRes instanceof TransactionMetadata).to.be.true;
 
@@ -671,9 +671,9 @@ async function fullFlow(
   const closedUserUnclaimedFee = svm.getAccount(userUnclaimedFee);
   expect(closedUserUnclaimedFee.lamports).eq(0);
 
-  // owner should have received rent back from removed user token vault
-  const ownerBalanceAfter = svm.getBalance(vaultOwner.publicKey);
-  expect(ownerBalanceAfter > ownerBalanceBefore).to.be.true;
+  // operator should have received rent back from removed user token vault
+  const operatorBalanceAfter = svm.getBalance(operator.publicKey);
+  expect(operatorBalanceAfter > operatorBalanceBefore).to.be.true;
 
   console.log("add new user after removing user[0]");
   svm.expireBlockhash();

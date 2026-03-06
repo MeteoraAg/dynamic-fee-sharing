@@ -454,9 +454,9 @@ export async function claimUnclaimedFee(params: {
   feeVault: PublicKey;
   tokenMint: PublicKey;
   user: Keypair;
-  owner: PublicKey;
+  operator: PublicKey;
 }) {
-  const { svm, program, feeVault, tokenMint, user, owner } = params;
+  const { svm, program, feeVault, tokenMint, user, operator } = params;
 
   const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
   const tokenVault = deriveTokenVaultAddress(feeVault);
@@ -475,7 +475,7 @@ export async function claimUnclaimedFee(params: {
       tokenVault,
       userUnclaimedFee,
       userTokenVault,
-      owner,
+      operator,
       user: user.publicKey,
       tokenProgram: TOKEN_PROGRAM_ID,
     })
