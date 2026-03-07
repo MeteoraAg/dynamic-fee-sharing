@@ -1,4 +1,5 @@
 use crate::event::EvtUpdateUserShare;
+use crate::state::DynamicFeeVaultLoader;
 use crate::state::FeeVault;
 use anchor_lang::prelude::*;
 
@@ -19,9 +20,9 @@ pub fn handle_update_user_share(
     index: u8,
     share: u32,
 ) -> Result<()> {
-    let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
+    let mut vault = ctx.accounts.fee_vault.load_content_mut()?;
     let user = ctx.accounts.user.key();
-    fee_vault.validate_and_update_share(index.into(), &user, share)?;
+    vault.update_share(index.into(), &user, share)?;
 
     emit_cpi!(EvtUpdateUserShare {
         fee_vault: ctx.accounts.fee_vault.key(),

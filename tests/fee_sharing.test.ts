@@ -10,6 +10,7 @@ import {
   expectThrowsErrorCode,
   fundFee,
   generateUsers,
+  getUserFees,
   getFeeVault,
   getOrCreateAtA,
   getProgramErrorCodeHexString,
@@ -308,7 +309,7 @@ describe("Fee vault sharing", () => {
     });
   });
 
-  it("Fail to add 6th user (exceeds MAX_USER)", async () => {
+  it("Successfully add and remove dynamic users (realloc)", async () => {
     const generatedUser = generateUsers(svm, 5);
     const users = generatedUser.map((item) => ({
       address: item.publicKey,
@@ -351,20 +352,151 @@ describe("Fee vault sharing", () => {
       vaultOwner,
     });
 
-    const errorCode = getProgramErrorCodeHexString("InvalidNumberOfUsers");
-    const newUser = Keypair.generate();
-    const addTx = await program.methods
-      .addUser(500)
-      .accountsPartial({
+    expect(getUserFees(svm, feeVault.publicKey).length).eq(5);
+
+    // Add 3 dynamic users (6, 7, 8)
+    const dynamicUsers: Keypair[] = [];
+    for (let i = 0; i < 3; i++) {
+      const newUser = Keypair.generate();
+      svm.airdrop(newUser.publicKey, BigInt(LAMPORTS_PER_SOL));
+      await addUser({
+        svm,
+        program,
         feeVault: feeVault.publicKey,
+        operator: user,
         user: newUser.publicKey,
-        signer: user.publicKey,
-      })
-      .transaction();
-    addTx.recentBlockhash = svm.latestBlockhash();
-    addTx.sign(user);
-    const addRes = svm.sendTransaction(addTx);
-    expectThrowsErrorCode(addRes, errorCode);
+        share: 500 + i * 100,
+      });
+      dynamicUsers.push(newUser);
+
+      const allUsers = getUserFees(svm, feeVault.publicKey);
+      expect(allUsers.length).eq(6 + i);
+      const lastUser = allUsers[allUsers.length - 1];
+      expect(lastUser.address.equals(newUser.publicKey)).to.be.true;
+      expect(lastUser.share).eq(500 + i * 100);
+    }
+
+    expect(getUserFees(svm, feeVault.publicKey).length).eq(8);
+
+    // Fund fee and verify all 8 users (fixed + dynamic) can claim
+    const fundAmount = new BN(100_000 * 10 ** TOKEN_DECIMALS);
+    svm.expireBlockhash();
+    await fundFee({
+      svm,
+      program,
+      funder,
+      fundAmount,
+      feeVault: feeVault.publicKey,
+      tokenMint,
+    });
+
+    const allUserKeys = [...generatedUser.map((u) => u), ...dynamicUsers];
+    const claimDeltas: InstanceType<typeof BN>[] = [];
+    for (let i = 0; i < allUserKeys.length; i++) {
+      const claimer = allUserKeys[i];
+      const userTokenVault = getOrCreateAtA(
+        svm,
+        claimer,
+        tokenMint,
+        claimer.publicKey,
+      );
+      const beforeBalance = getTokenBalance(svm, userTokenVault);
+
+      const claimTx = await program.methods
+        .claimFee(i)
+        .accountsPartial({
+          feeVault: feeVault.publicKey,
+          tokenMint,
+          tokenVault,
+          userTokenVault,
+          user: claimer.publicKey,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .transaction();
+      claimTx.recentBlockhash = svm.latestBlockhash();
+      claimTx.sign(claimer);
+
+      const claimRes = svm.sendTransaction(claimTx);
+      expect(claimRes instanceof TransactionMetadata).to.be.true;
+
+      const afterBalance = getTokenBalance(svm, userTokenVault);
+      claimDeltas.push(afterBalance.sub(beforeBalance));
+    }
+
+    // All users should have received fees
+    expect(claimDeltas.every((d) => d.gtn(0))).to.be.true;
+    // Fixed users (equal share=1000) should get the same amount
+    expect(claimDeltas.slice(0, 5).every((d) => d.eq(claimDeltas[0]))).to.be
+      .true;
+
+    // Remove 2 dynamic users (index 7, then 6)
+    for (let i = 0; i < 2; i++) {
+      const userToRemove = dynamicUsers[dynamicUsers.length - 1 - i];
+      const removeIndex = 7 - i;
+
+      svm.expireBlockhash();
+      await removeUser({
+        svm,
+        program,
+        feeVault: feeVault.publicKey,
+        signer: user,
+        user: userToRemove.publicKey,
+        index: removeIndex,
+      });
+
+      const allUsers = getUserFees(svm, feeVault.publicKey);
+      expect(allUsers.length).eq(7 - i);
+      expect(allUsers.every((u) => !u.address.equals(userToRemove.publicKey)))
+        .to.be.true;
+    }
+
+    expect(getUserFees(svm, feeVault.publicKey).length).eq(6);
+
+    // Fund again and verify remaining 6 users can claim
+    svm.expireBlockhash();
+    await fundFee({
+      svm,
+      program,
+      funder,
+      fundAmount,
+      feeVault: feeVault.publicKey,
+      tokenMint,
+    });
+
+    const remainingUserKeys = [
+      ...generatedUser.map((u) => u),
+      dynamicUsers[0],
+    ];
+    for (let i = 0; i < remainingUserKeys.length; i++) {
+      const claimer = remainingUserKeys[i];
+      const userTokenVault = getOrCreateAtA(
+        svm,
+        claimer,
+        tokenMint,
+        claimer.publicKey,
+      );
+      const beforeBalance = getTokenBalance(svm, userTokenVault);
+
+      const claimTx = await program.methods
+        .claimFee(i)
+        .accountsPartial({
+          feeVault: feeVault.publicKey,
+          tokenMint,
+          tokenVault,
+          userTokenVault,
+          user: claimer.publicKey,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .transaction();
+      claimTx.recentBlockhash = svm.latestBlockhash();
+      claimTx.sign(claimer);
+
+      const claimRes = svm.sendTransaction(claimTx);
+      expect(claimRes instanceof TransactionMetadata).to.be.true;
+
+      const afterBalance = getTokenBalance(svm, userTokenVault);
+      expect(afterBalance.sub(beforeBalance).gtn(0)).to.be.true;
+    }
   });
 
   it("Full flow", async () => {

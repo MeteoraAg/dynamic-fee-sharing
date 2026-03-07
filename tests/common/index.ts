@@ -72,6 +72,40 @@ export function getFeeVault(svm: LiteSVM, feeVault: PublicKey): FeeVault {
   return program.coder.accounts.decode("feeVault", Buffer.from(account.data));
 }
 
+export const DISCRIMINATOR_SIZE = 8;
+export const FEE_VAULT_SIZE = 640;
+export const USER_FEE_SIZE = 80;
+
+export function getUserFees(
+  svm: LiteSVM,
+  feeVault: PublicKey,
+): { address: PublicKey; share: number }[] {
+  const program = createProgram();
+  const account = svm.getAccount(feeVault);
+  const data = Buffer.from(account.data);
+  const feeVaultData = program.coder.accounts.decode("feeVault", data);
+
+  const fixedUsers = feeVaultData.users.filter(
+    (x) => !x.address.equals(PublicKey.default),
+  );
+
+  const dynamicStart = DISCRIMINATOR_SIZE + FEE_VAULT_SIZE;
+  const dynamicBytes = data.length - dynamicStart;
+  const dynamicCount = dynamicBytes / USER_FEE_SIZE;
+  const dynamicUsers = [];
+  for (let i = 0; i < dynamicCount; i++) {
+    const offset = dynamicStart + i * USER_FEE_SIZE;
+    const address = new PublicKey(data.subarray(offset, offset + 32));
+    const share = data.readUInt32LE(offset + 32);
+    dynamicUsers.push({ address, share });
+  }
+
+  return [
+    ...fixedUsers.map((u) => ({ address: u.address, share: u.share })),
+    ...dynamicUsers,
+  ];
+}
+
 export function deriveFeeVaultAuthorityAddress(): PublicKey {
   const program = createProgram();
   return PublicKey.findProgramAddressSync(
@@ -348,9 +382,7 @@ export async function addUser(params: {
 }) {
   const { svm, program, feeVault, operator, user, share } = params;
 
-  const beforeUsersCount = getFeeVault(svm, feeVault).users.filter(
-    (x) => !x.address.equals(PublicKey.default),
-  ).length;
+  const beforeUsersCount = getUserFees(svm, feeVault).length;
 
   const tx = await program.methods
     .addUser(share)
@@ -366,15 +398,8 @@ export async function addUser(params: {
   const res = sendTransactionOrExpectThrowError(svm, tx);
   expect(res instanceof TransactionMetadata).to.be.true;
 
-  const afterUsersCount = getFeeVault(svm, feeVault).users.filter(
-    (x) => !x.address.equals(PublicKey.default),
-  ).length;
+  const afterUsersCount = getUserFees(svm, feeVault).length;
   expect(afterUsersCount - beforeUsersCount).eq(1);
-
-  const userFee = getFeeVault(svm, feeVault).users.find((u) =>
-    u.address.equals(user),
-  );
-  expect(userFee.share).eq(share);
 }
 
 export async function updateUserShare(params: {
@@ -420,9 +445,7 @@ export async function removeUser(params: {
 
   const userUnclaimedFee = deriveUserUnclaimedFeeAddress(feeVault, user);
 
-  const beforeUsersCount = getFeeVault(svm, feeVault).users.filter(
-    (x) => !x.address.equals(PublicKey.default),
-  ).length;
+  const beforeUsersCount = getUserFees(svm, feeVault).length;
 
   const tx = await program.methods
     .removeUser(index)
@@ -430,6 +453,7 @@ export async function removeUser(params: {
       feeVault,
       user,
       userUnclaimedFee,
+      rentReceiver: signer.publicKey,
       signer: signer.publicKey,
       systemProgram: SystemProgram.programId,
     })
@@ -438,9 +462,7 @@ export async function removeUser(params: {
   tx.sign(signer);
 
   const res = sendTransactionOrExpectThrowError(svm, tx);
-  const afterUsersCount = getFeeVault(svm, feeVault).users.filter(
-    (x) => !x.address.equals(PublicKey.default),
-  ).length;
+  const afterUsersCount = getUserFees(svm, feeVault).length;
 
   expect(res instanceof TransactionMetadata).to.be.true;
   expect(beforeUsersCount - afterUsersCount).eq(1);

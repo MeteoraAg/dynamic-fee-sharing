@@ -1,7 +1,7 @@
 use crate::constants::WHITELISTED_ACTIONS;
 use crate::event::EvtFundFee;
 use crate::math::SafeCast;
-use crate::state::{FeeVault, FeeVaultType};
+use crate::state::{DynamicFeeVaultLoader, FeeVault, FeeVaultType};
 use crate::{error::FeeVaultError, math::SafeMath};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{instruction::Instruction, program::invoke_signed};
@@ -54,18 +54,23 @@ pub fn handle_fund_by_claiming_fee(
         FeeVaultError::InvalidAction
     );
 
-    let fee_vault = ctx.accounts.fee_vault.load()?;
+    let vault = ctx.accounts.fee_vault.load_content_mut()?;
 
     require!(
-        fee_vault.is_share_holder(ctx.accounts.signer.key),
+        vault.is_share_holder(ctx.accounts.signer.key),
         FeeVaultError::InvalidSigner
     );
 
     // support fee vault type is pda account
     require!(
-        fee_vault.fee_vault_type.safe_cast()? == FeeVaultType::PdaAccount,
+        vault.fee_vault.fee_vault_type.safe_cast()? == FeeVaultType::PdaAccount,
         FeeVaultError::InvalidFeeVault
     );
+
+    let base = vault.fee_vault.base;
+    let token_mint = vault.fee_vault.token_mint;
+    let fee_vault_bump = vault.fee_vault.fee_vault_bump;
+    drop(vault);
 
     let before_token_vault_balance = ctx.accounts.token_vault.amount;
 
@@ -76,7 +81,7 @@ pub fn handle_fund_by_claiming_fee(
             let is_signer = acc.key == &ctx.accounts.fee_vault.key();
             AccountMeta {
                 pubkey: *acc.key,
-                is_signer: is_signer,
+                is_signer,
                 is_writable: acc.is_writable,
             }
         })
@@ -88,11 +93,7 @@ pub fn handle_fund_by_claiming_fee(
         .map(|acc| AccountInfo { ..acc.clone() })
         .collect();
     // invoke instruction to amm
-    let base = fee_vault.base;
-    let token_mint = fee_vault.token_mint;
-    let fee_vault_bump = fee_vault.fee_vault_bump;
     let signer_seeds = fee_vault_seeds!(base, token_mint, fee_vault_bump);
-    drop(fee_vault);
 
     invoke_signed(
         &Instruction {

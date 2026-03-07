@@ -1,4 +1,4 @@
-use crate::constants::{MAX_USER, MIN_USER};
+use crate::constants::{MAX_STATIC_USER, MIN_USER};
 use crate::error::FeeVaultError;
 use crate::event::EvtInitializeFeeVault;
 use crate::state::FeeVaultType;
@@ -27,7 +27,7 @@ impl InitializeFeeVaultParameters {
     pub fn validate(&self) -> Result<()> {
         let number_of_users = self.users.len();
         require!(
-            number_of_users >= MIN_USER && number_of_users <= MAX_USER,
+            number_of_users >= MIN_USER && number_of_users <= MAX_STATIC_USER,
             FeeVaultError::InvalidNumberOfUsers
         );
         for i in 0..number_of_users {

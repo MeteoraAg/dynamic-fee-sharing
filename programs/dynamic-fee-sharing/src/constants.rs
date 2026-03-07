@@ -2,7 +2,8 @@ use anchor_lang::prelude::Pubkey;
 use anchor_lang::Discriminator;
 
 pub const MIN_USER: usize = 2;
-pub const MAX_USER: usize = 5;
+pub const MAX_STATIC_USER: usize = 5;
+pub const MAX_USER: usize = 100; // 5 static users + 95 dynamic users; this is an arbitrary limit
 pub const PRECISION_SCALE: u8 = 64;
 
 pub mod seeds {

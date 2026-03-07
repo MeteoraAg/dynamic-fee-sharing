@@ -1,6 +1,6 @@
 use crate::constants::seeds::USER_UNCLAIMED_FEE_PREFIX;
 use crate::event::EvtRemoveUser;
-use crate::state::{FeeVault, UserUnclaimedFee};
+use crate::state::{shrink_dynamic_user, DynamicFeeVaultLoader, FeeVault, UserUnclaimedFee};
 use crate::utils::account::{
     create_pda_account_with_anchor_discriminator, validate_and_load_account_data_mut,
 };
@@ -27,16 +27,23 @@ pub struct RemoveUserCtx<'info> {
     )]
     pub user_unclaimed_fee: UncheckedAccount<'info>,
 
+    /// CHECK: receives excess rent lamports after account shrink
+    #[account(mut)]
+    pub rent_receiver: UncheckedAccount<'info>,
+
     #[account(mut)]
     pub signer: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
 pub fn handle_remove_user(ctx: Context<RemoveUserCtx>, index: u8) -> Result<()> {
-    let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
+    let fee_vault_info = ctx.accounts.fee_vault.as_ref().to_account_info();
     let user = ctx.accounts.user.key();
-    let unclaimed_fee =
-        fee_vault.validate_and_remove_user_and_get_unclaimed_fee(index.into(), &user)?;
+
+    let (unclaimed_fee, should_shrink) = {
+        let mut vault = ctx.accounts.fee_vault.load_content_mut()?;
+        vault.remove_user(index.into(), &user)?
+    };
 
     if unclaimed_fee > 0 {
         let user_unclaimed_fee_account = &ctx.accounts.user_unclaimed_fee;
@@ -64,6 +71,13 @@ pub fn handle_remove_user(ctx: Context<RemoveUserCtx>, index: u8) -> Result<()> 
             &mut data,
         )?;
         user_unclaimed_fee.initialize_and_add_unclaimed_fee(user, fee_vault_key, unclaimed_fee)?;
+    }
+
+    if should_shrink {
+        shrink_dynamic_user(
+            &fee_vault_info,
+            &ctx.accounts.rent_receiver.to_account_info(),
+        )?;
     }
 
     emit_cpi!(EvtRemoveUser {
