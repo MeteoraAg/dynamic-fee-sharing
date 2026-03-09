@@ -49,7 +49,8 @@ pub fn handle_remove_user(ctx: Context<RemoveUserCtx>, index: u8) -> Result<()> 
         let user_unclaimed_fee_account = &ctx.accounts.user_unclaimed_fee;
         let fee_vault_key = ctx.accounts.fee_vault.key();
 
-        if user_unclaimed_fee_account.data_is_empty() {
+        let is_empty = user_unclaimed_fee_account.data_is_empty();
+        if is_empty {
             let bump = ctx.bumps.user_unclaimed_fee;
 
             create_pda_account_with_anchor_discriminator::<UserUnclaimedFee>(
@@ -70,7 +71,10 @@ pub fn handle_remove_user(ctx: Context<RemoveUserCtx>, index: u8) -> Result<()> 
             user_unclaimed_fee_account.owner,
             &mut data,
         )?;
-        user_unclaimed_fee.initialize_and_add_unclaimed_fee(user, fee_vault_key, unclaimed_fee)?;
+        if is_empty {
+            user_unclaimed_fee.initialize(user, fee_vault_key);
+        }
+        user_unclaimed_fee.add_unclaimed_fee(unclaimed_fee)?;
     }
 
     if should_shrink {

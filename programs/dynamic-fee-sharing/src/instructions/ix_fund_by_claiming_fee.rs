@@ -78,7 +78,7 @@ pub fn handle_fund_by_claiming_fee(
         .remaining_accounts
         .iter()
         .map(|acc| {
-            let is_signer = acc.key == &ctx.accounts.fee_vault.key();
+            let is_signer = acc.key.eq(&ctx.accounts.fee_vault.key());
             AccountMeta {
                 pubkey: *acc.key,
                 is_signer,

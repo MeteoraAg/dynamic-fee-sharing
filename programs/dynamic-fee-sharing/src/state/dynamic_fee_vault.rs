@@ -86,20 +86,8 @@ impl<'a> DynamicFeeVault<'a> {
             .count()
     }
 
-    pub fn validate_new_user(&self, user: &Pubkey) -> Result<()> {
-        require!(
-            user.ne(&Pubkey::default()) && !self.is_share_holder(user),
-            FeeVaultError::InvalidUserAddress
-        );
-        require!(
-            self.get_user_count() < MAX_USER,
-            FeeVaultError::InvalidNumberOfUsers
-        );
-
-        Ok(())
-    }
-
-    pub fn find_empty_slot_in_fixed_users(&self) -> Option<usize> {
+    // Find the first empty slot in the fixed-size users
+    pub fn find_first_empty_slot_in_fixed_users(&self) -> Option<usize> {
         self.fee_vault
             .users
             .iter()
@@ -150,6 +138,37 @@ impl<'a> DynamicFeeVault<'a> {
         Ok(())
     }
 
+    /// removes the user at index and shift-left the user in the arrays that are after the removed slot.
+    /// returns whether the dynamic array should shrink after the removal.
+    fn remove_user_slot(&mut self, index: usize) -> Result<bool> {
+        let dynamic_removal_slot_index = if index < MAX_STATIC_USER {
+            // shift fixed users left
+            let last_fixed_index = MAX_STATIC_USER.safe_sub(1)?;
+            for i in index..last_fixed_index {
+                self.fee_vault.users[i] = self.fee_vault.users[i.safe_add(1)?];
+            }
+
+            if self.dynamic_user_data.is_empty() {
+                self.fee_vault.users[last_fixed_index] = UserFee::default();
+                return Ok(false); // return early
+            }
+
+            // shift first dynamic user into last fixed slot
+            self.fee_vault.users[last_fixed_index] = self.dynamic_user_data[0];
+            0
+        } else {
+            index.safe_sub(MAX_STATIC_USER)?
+        };
+
+        // shift dynamic users left
+        let dynamic_len = self.dynamic_user_data.len();
+        for i in dynamic_removal_slot_index..dynamic_len.safe_sub(1)? {
+            self.dynamic_user_data[i] = self.dynamic_user_data[i.safe_add(1)?];
+        }
+        self.dynamic_user_data[dynamic_len.safe_sub(1)?] = UserFee::default();
+        Ok(true)
+    }
+
     pub fn remove_user(&mut self, index: usize, user_address: &Pubkey) -> Result<(u64, bool)> {
         require!(
             user_address.ne(&Pubkey::default()),
@@ -170,21 +189,25 @@ impl<'a> DynamicFeeVault<'a> {
         );
 
         let unclaimed_fee = user.get_total_pending_fee(self.fee_vault.fee_per_share)?;
-        let share = user.share;
-
-        let should_shrink = if index < MAX_STATIC_USER {
-            self.fee_vault.users[index] = UserFee::default();
-            false
-        } else {
-            let dynamic_index = index.safe_sub(MAX_STATIC_USER)?;
-            // zero out the dynamic user data for safety
-            self.dynamic_user_data[dynamic_index] = UserFee::default();
-            dynamic_index == self.dynamic_user_data.len() - 1
-        };
-
-        self.fee_vault.total_share = self.fee_vault.total_share.safe_sub(share)?;
+        self.fee_vault.total_share = self.fee_vault.total_share.safe_sub(user.share)?;
+        let should_shrink = self.remove_user_slot(index)?;
 
         Ok((unclaimed_fee, should_shrink))
+    }
+
+    pub fn validate_add_user(&self, user: &Pubkey) -> Result<()> {
+        require!(
+            user.ne(&Pubkey::default()) && !self.is_share_holder(user),
+            FeeVaultError::InvalidUserAddress
+        );
+
+        // user_count does not include the user being added; after addition count should be at most MAX_USER
+        require!(
+            self.get_user_count() < MAX_USER,
+            FeeVaultError::InvalidNumberOfUsers
+        );
+
+        Ok(())
     }
 
     pub fn add_user(&mut self, slot: Option<usize>, user: &Pubkey, share: u32) -> Result<()> {
@@ -211,7 +234,7 @@ pub fn grow_dynamic_user<'info>(
     signer: &Signer<'info>,
     system_program: &Program<'info, System>,
 ) -> Result<()> {
-    let new_len = fee_vault_info.data_len() + UserFee::INIT_SPACE;
+    let new_len = fee_vault_info.data_len().safe_add(UserFee::INIT_SPACE)?;
     let rent = Rent::get()?;
     let lamports_diff = rent
         .minimum_balance(new_len)
@@ -238,7 +261,7 @@ pub fn shrink_dynamic_user<'info>(
     fee_vault_info: &AccountInfo<'info>,
     rent_receiver: &AccountInfo<'info>,
 ) -> Result<()> {
-    let new_len = fee_vault_info.data_len() - UserFee::INIT_SPACE;
+    let new_len = fee_vault_info.data_len().safe_sub(UserFee::INIT_SPACE)?;
 
     fee_vault_info.realloc(new_len, false)?;
 

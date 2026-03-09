@@ -24,8 +24,8 @@ pub fn handle_add_user(ctx: Context<AddUserCtx>, share: u32) -> Result<()> {
 
     let empty_slot = {
         let vault = ctx.accounts.fee_vault.load_content_mut()?;
-        vault.validate_new_user(&user)?;
-        vault.find_empty_slot_in_fixed_users()
+        vault.validate_add_user(&user)?;
+        vault.find_first_empty_slot_in_fixed_users()
     };
 
     if empty_slot.is_none() {
