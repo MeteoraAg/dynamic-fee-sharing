@@ -22,8 +22,8 @@ pub fn handle_update_operator(ctx: Context<UpdateOperatorCtx>) -> Result<()> {
     );
 
     require!(
-        ctx.accounts.operator.key() != fee_vault.operator
-            && ctx.accounts.operator.key() != fee_vault.owner,
+        ctx.accounts.operator.key().ne(&fee_vault.operator)
+            && ctx.accounts.operator.key().ne(&Pubkey::default()), // Prevent unsetting the operator
         FeeVaultError::InvalidOperatorAddress
     );
 

@@ -27,7 +27,7 @@ pub struct RemoveUserCtx<'info> {
     )]
     pub user_unclaimed_fee: UncheckedAccount<'info>,
 
-    /// CHECK: receives excess rent lamports after account shrink
+    /// CHECK: receives excess rent lamports after account shrink. can be any address
     #[account(mut)]
     pub rent_receiver: UncheckedAccount<'info>,
 

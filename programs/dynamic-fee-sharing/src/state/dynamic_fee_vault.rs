@@ -73,8 +73,9 @@ impl DynamicFeeVault<'_> {
     }
 
     pub fn is_share_holder(&self, user: &Pubkey) -> bool {
-        self.fee_vault.users.iter().any(|u| u.address.eq(user))
-            || self.dynamic_user_data.iter().any(|u| u.address.eq(user))
+        user.ne(&Pubkey::default())
+            && (self.fee_vault.users.iter().any(|u| u.address.eq(user))
+                || self.dynamic_user_data.iter().any(|u| u.address.eq(user)))
     }
 
     pub fn get_user_count(&self) -> usize {
@@ -118,6 +119,7 @@ impl DynamicFeeVault<'_> {
             FeeVaultError::InvalidUserAddress
         );
 
+        // share can be set to 0
         let old_share = user.share;
 
         user.pending_fee = user.get_total_pending_fee(fee_per_share)?;
