@@ -65,7 +65,7 @@ pub struct InitializeFeeVaultCtx<'info> {
     /// CHECK: pool authority
     #[account(
             seeds = [
-                FEE_VAULT_AUTHORITY_PREFIX.as_ref(),
+                FEE_VAULT_AUTHORITY_PREFIX,
             ],
             bump,
         )]
@@ -74,7 +74,7 @@ pub struct InitializeFeeVaultCtx<'info> {
     #[account(
         init,
         seeds = [
-            TOKEN_VAULT_PREFIX.as_ref(),
+            TOKEN_VAULT_PREFIX,
             fee_vault.key().as_ref(),
         ],
         token::mint = token_mint,
@@ -130,7 +130,7 @@ pub fn handle_initialize_fee_vault(
 }
 
 pub fn create_fee_vault<'info>(
-    token_mint: &Box<InterfaceAccount<'info, Mint>>,
+    token_mint: &InterfaceAccount<'info, Mint>,
     params: &InitializeFeeVaultParameters,
     fee_vault: &AccountLoader<'info, FeeVault>,
     owner: &Pubkey,
@@ -140,14 +140,14 @@ pub fn create_fee_vault<'info>(
     fee_vault_type: u8,
     mutable_flag: u8,
 ) -> Result<()> {
-    require!(is_supported_mint(&token_mint)?, FeeVaultError::InvalidMint);
+    require!(is_supported_mint(token_mint)?, FeeVaultError::InvalidMint);
 
     params.validate()?;
 
     let mut fee_vault = fee_vault.load_init()?;
     fee_vault.initialize(
         owner,
-        get_token_program_flags(&token_mint).into(),
+        get_token_program_flags(token_mint).into(),
         &token_mint.key(),
         token_vault,
         base,

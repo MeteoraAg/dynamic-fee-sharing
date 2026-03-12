@@ -15,7 +15,7 @@ pub struct InitializeFeeVaultPdaCtx<'info> {
     #[account(
         init,
         seeds = [
-            FEE_VAULT_PREFIX.as_ref(),
+            FEE_VAULT_PREFIX,
             base.key().as_ref(),
             token_mint.key().as_ref(),
         ],
@@ -28,7 +28,7 @@ pub struct InitializeFeeVaultPdaCtx<'info> {
     /// CHECK: pool authority
     #[account(
             seeds = [
-                FEE_VAULT_AUTHORITY_PREFIX.as_ref(),
+                FEE_VAULT_AUTHORITY_PREFIX,
             ],
             bump,
         )]
@@ -37,7 +37,7 @@ pub struct InitializeFeeVaultPdaCtx<'info> {
     #[account(
         init,
         seeds = [
-            TOKEN_VAULT_PREFIX.as_ref(),
+            TOKEN_VAULT_PREFIX,
             fee_vault.key().as_ref(),
         ],
         token::mint = token_mint,
@@ -77,7 +77,7 @@ pub fn handle_initialize_fee_vault_pda(
         &ctx.accounts.fee_vault,
         ctx.accounts.owner.key,
         &ctx.accounts.token_vault.key(),
-        &ctx.accounts.base.key,
+        ctx.accounts.base.key,
         ctx.bumps.fee_vault,
         FeeVaultType::PdaAccount.into(),
         params.mutable_flag.into(),

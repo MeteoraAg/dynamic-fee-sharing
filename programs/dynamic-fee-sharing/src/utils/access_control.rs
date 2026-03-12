@@ -1,8 +1,8 @@
 use crate::{error::FeeVaultError, state::FeeVault};
 use anchor_lang::prelude::*;
 
-pub fn verify_is_mutable_and_operator<'info>(
-    fee_vault: &AccountLoader<'info, FeeVault>,
+pub fn verify_is_mutable_and_operator(
+    fee_vault: &AccountLoader<FeeVault>,
     signer: &Pubkey,
 ) -> Result<()> {
     let fee_vault = fee_vault.load()?;

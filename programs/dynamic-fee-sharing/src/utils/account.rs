@@ -83,7 +83,7 @@ pub fn create_pda_account_with_anchor_discriminator<'a, T: Discriminator + Space
     )?;
 
     let mut data = new_pda_account.try_borrow_mut_data()?;
-    data[..T::DISCRIMINATOR.len()].copy_from_slice(&T::DISCRIMINATOR);
+    data[..T::DISCRIMINATOR.len()].copy_from_slice(T::DISCRIMINATOR);
 
     Ok(())
 }

@@ -23,11 +23,11 @@ pub struct FundByClaimingFeeCtx<'info> {
     pub source_program: UncheckedAccount<'info>,
 }
 
-pub fn is_support_action<'info>(
+pub fn is_support_action(
     source_program: &Pubkey,
     discriminator: &[u8],
     token_vault: Pubkey,
-    remaining_accounts: &[AccountInfo<'info>],
+    remaining_accounts: &[AccountInfo],
 ) -> bool {
     for &(program, disc, token_vault_index) in WHITELISTED_ACTIONS.iter() {
         if program.eq(source_program) && disc.eq(discriminator) {

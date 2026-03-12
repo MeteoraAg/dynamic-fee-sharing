@@ -16,17 +16,17 @@ pub struct DynamicFeeVault<'a> {
 }
 
 pub trait DynamicFeeVaultLoader<'info> {
-    fn load_content_mut<'a>(&'a self) -> Result<DynamicFeeVault<'a>>;
+    fn load_content_mut(&self) -> Result<DynamicFeeVault>;
 }
 
 impl<'info> DynamicFeeVaultLoader<'info> for AccountLoader<'info, FeeVault> {
-    fn load_content_mut<'a>(&'a self) -> Result<DynamicFeeVault<'a>> {
+    fn load_content_mut(&self) -> Result<DynamicFeeVault> {
         fee_vault_account_split(self)
     }
 }
 
-fn fee_vault_account_split<'a, 'info>(
-    fee_vault_account_loader: &'a AccountLoader<'info, FeeVault>,
+fn fee_vault_account_split<'a>(
+    fee_vault_account_loader: &'a AccountLoader<FeeVault>,
 ) -> Result<DynamicFeeVault<'a>> {
     let data = fee_vault_account_loader.as_ref().try_borrow_mut_data()?;
 
@@ -43,7 +43,7 @@ fn fee_vault_account_split<'a, 'info>(
     })
 }
 
-impl<'a> DynamicFeeVault<'a> {
+impl DynamicFeeVault<'_> {
     fn get_user(&self, index: usize) -> Result<&UserFee> {
         if index < MAX_STATIC_USER {
             self.fee_vault

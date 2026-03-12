@@ -98,9 +98,9 @@ impl FeeVault {
         self.token_mint = *token_mint;
         self.token_vault = *token_vault;
         let mut total_share = 0;
-        for i in 0..users.len() {
-            self.users[i] = UserFee::new(users[i].address, users[i].share, 0);
-            total_share = total_share.safe_add(users[i].share)?;
+        for (i, user) in users.iter().enumerate() {
+            self.users[i] = UserFee::new(user.address, user.share, 0);
+            total_share = total_share.safe_add(user.share)?;
         }
         self.total_share = total_share;
         self.base = *base;
