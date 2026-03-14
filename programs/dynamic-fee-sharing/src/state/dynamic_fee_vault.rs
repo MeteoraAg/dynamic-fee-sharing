@@ -192,6 +192,12 @@ impl DynamicFeeVault<'_> {
 
         let unclaimed_fee = user.get_total_pending_fee(self.fee_vault.fee_per_share)?;
         self.fee_vault.total_share = self.fee_vault.total_share.safe_sub(user.share)?;
+
+        require!(
+            self.fee_vault.total_share > 0,
+            FeeVaultError::InvalidFeeVaultParameters
+        );
+
         let should_shrink = self.remove_user_slot(index)?;
 
         Ok((unclaimed_fee, should_shrink))
