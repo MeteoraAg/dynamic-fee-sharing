@@ -8,7 +8,7 @@ use anchor_spl::{
             StateWithExtensions,
         },
     },
-    token_interface::{Mint, TokenAccount, TokenInterface},
+    token_interface::{Mint, TokenAccount},
 };
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
@@ -104,12 +104,12 @@ pub fn get_epoch_transfer_fee<'info>(
     Ok(None)
 }
 
-pub fn transfer_from_user<'a, 'c: 'info, 'info>(
+pub fn transfer_from_user<'a, 'info>(
     authority: &'a Signer<'info>,
     token_mint: &'a InterfaceAccount<'info, Mint>,
     token_owner_account: &'a InterfaceAccount<'info, TokenAccount>,
     destination_token_account: &'a InterfaceAccount<'info, TokenAccount>,
-    token_program: &'a Interface<'info, TokenInterface>,
+    token_program: &'a AccountInfo<'info>,
     amount: u64,
 ) -> Result<()> {
     let destination_account = destination_token_account.to_account_info();
@@ -137,12 +137,12 @@ pub fn transfer_from_user<'a, 'c: 'info, 'info>(
     Ok(())
 }
 
-pub fn transfer_from_fee_vault<'c: 'info, 'info>(
+pub fn transfer_from_fee_vault<'info>(
     pool_authority: AccountInfo<'info>,
     token_mint: &InterfaceAccount<'info, Mint>,
     token_vault: &InterfaceAccount<'info, TokenAccount>,
     token_owner_account: &InterfaceAccount<'info, TokenAccount>,
-    token_program: &Interface<'info, TokenInterface>,
+    token_program: &AccountInfo<'info>,
     amount: u64,
 ) -> Result<()> {
     let signer_seeds = fee_vault_authority_seeds!();

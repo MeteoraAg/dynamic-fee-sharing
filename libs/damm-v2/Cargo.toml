@@ -4,6 +4,15 @@ version = "0.1.3"
 authors = [""]
 edition = "2021"
 
+[lib]
+doctest = false
+
+[features]
+idl-build = ["anchor-lang/idl-build"]
+
 [dependencies]
 anchor-lang = { workspace = true }
 bytemuck = { workspace = true, features = ["min_const_generics"] }
+
+[lints]
+workspace = true

@@ -7,10 +7,9 @@ on:
       - release_*
 
 env:
-  SOLANA_CLI_VERSION: 2.1.0
-  NODE_VERSION: 22.15.0
-  ANCHOR_CLI_VERSION: 0.31.0
-  TOOLCHAIN: 1.76.0
+  SOLANA_CLI_VERSION: 3.1.10
+  ANCHOR_CLI_VERSION: 1.0.0
+  TOOLCHAIN: 1.93.0
 
 jobs:
   program_changed_files:
@@ -52,10 +51,8 @@ jobs:
       - uses: ./.github/actions/setup-solana
       - uses: ./.github/actions/setup-dep
       - uses: ./.github/actions/setup-anchor
-      # Install pnpm
-      - uses: pnpm/action-setup@v3 # docs https://pnpm.io/continuous-integration#github-actions
-        with:
-          version: 9.5.0 # Optional: specify a pnpm version
+      # Install bun
+      - uses: oven-sh/setup-bun@v2
       # Install rust + toolchain
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -68,9 +65,9 @@ jobs:
         id: cache-node-modules
         with:
           path: ./node_modules
-          key: ${{ runner.os }}-${{ hashFiles('./package-lock.json') }}
+          key: ${{ runner.os }}-${{ hashFiles('./bun.lock') }}
       # Testing
-      - run: pnpm install
+      - run: bun install
         shell: bash
-      - run: pnpm test
+      - run: bun run test
         shell: bash

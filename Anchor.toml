@@ -1,5 +1,7 @@
 [toolchain]
-package_manager = "yarn"
+anchor_version = "1.0.0"
+solana_version = "3.1.10"
+package_manager = "bun"
 
 [features]
 resolution = true
@@ -15,5 +17,4 @@ url = "https://api.apr.dev"
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
-[scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+[hooks]

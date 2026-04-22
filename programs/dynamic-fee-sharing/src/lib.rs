@@ -1,5 +1,3 @@
-#![allow(unexpected_cfgs)]
-
 use anchor_lang::prelude::*;
 #[macro_use]
 pub mod macros;
