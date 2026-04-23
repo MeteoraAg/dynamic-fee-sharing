@@ -5,7 +5,7 @@
     "build": "anchor build --ignore-keys",
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
-    "build-test": "bun run build && bunx ts-mocha -p ./tsconfig.json -t 1000000 tests/*.test.ts"
+    "test": "bun run build && bunx ts-mocha -p ./tsconfig.json -t 1000000 tests/*.test.ts"
   },
   "dependencies": {
     "@anchor-lang/core": "^1.0.0",
