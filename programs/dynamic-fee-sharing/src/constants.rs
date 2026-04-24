@@ -8,6 +8,8 @@ pub mod seeds {
     pub const FEE_VAULT_PREFIX: &[u8] = b"fee_vault";
     pub const FEE_VAULT_AUTHORITY_PREFIX: &[u8] = b"fee_vault_authority";
     pub const TOKEN_VAULT_PREFIX: &[u8] = b"token_vault";
+
+    pub const DAMM_V2_POSITION_NFT_ACCOUNT_PREFIX: &[u8] = b"position_nft_account";
 }
 
 // (program_id, instruction, index_of_token_vault_account)

@@ -1,6 +1,7 @@
 use crate::constants::WHITELISTED_ACTIONS;
 use crate::event::EvtFundFee;
-use crate::state::FeeVault;
+use crate::math::SafeCast;
+use crate::state::{FeeVault, FeeVaultType};
 use crate::{error::FeeVaultError, math::SafeMath};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{instruction::Instruction, program::invoke_signed};
@@ -62,7 +63,7 @@ pub fn handle_fund_by_claiming_fee(
 
     // support fee vault type is pda account
     require!(
-        fee_vault.fee_vault_type == 1,
+        fee_vault.fee_vault_type.safe_cast()? == FeeVaultType::PdaAccount,
         FeeVaultError::InvalidFeeVault
     );
 

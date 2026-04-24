@@ -34,4 +34,10 @@ pub enum FeeVaultError {
 
     #[msg("Invalid action")]
     InvalidAction,
+
+    #[msg("Type cast error")]
+    TypeCastFailed,
+
+    #[msg("Not permit to do this action")]
+    Unauthorized,
 }

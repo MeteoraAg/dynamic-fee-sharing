@@ -7,6 +7,8 @@ pub mod constants;
 pub mod error;
 pub mod instructions;
 pub use instructions::*;
+pub mod access_control;
+pub use access_control::*;
 pub mod const_pda;
 pub mod event;
 pub mod math;
@@ -46,5 +48,10 @@ pub mod dynamic_fee_sharing {
 
     pub fn claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {
         instructions::handle_claim_fee(ctx, index)
+    }
+
+    #[access_control(is_fee_vault_owner(&ctx.accounts.fee_vault, ctx.accounts.owner.key))]
+    pub fn reclaim_damm_v2_position(ctx: Context<ReclaimDammV2PositionCtx>) -> Result<()> {
+        instructions::handle_reclaim_damm_v2_position(ctx)
     }
 }

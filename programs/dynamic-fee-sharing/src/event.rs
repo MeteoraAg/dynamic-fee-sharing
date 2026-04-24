@@ -27,3 +27,10 @@ pub struct EvtClaimFee {
     pub index: u8,
     pub claimed_fee: u64,
 }
+
+#[event]
+pub struct EvtReclaimDammV2Position {
+    pub fee_vault: Pubkey,
+    pub position_nft_account: Pubkey,
+    pub new_owner: Pubkey,
+}

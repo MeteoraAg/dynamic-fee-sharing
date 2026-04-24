@@ -1,4 +1,4 @@
-use crate::error::FeeVaultError;
+use crate::{error::FeeVaultError, state::FeeVaultType};
 use anchor_lang::solana_program::msg;
 use ruint::aliases::{U256, U512};
 use std::panic::Location;
@@ -159,3 +159,27 @@ mod tests {
         assert_eq!(200u128.safe_shr(1), Ok(100))
     }
 }
+
+pub trait SafeCast<T>: Sized {
+    fn safe_cast(self) -> Result<T, FeeVaultError>;
+}
+
+macro_rules! try_into_impl {
+    ($t:ty, $v:ty) => {
+        impl SafeCast<$v> for $t {
+            #[track_caller]
+            fn safe_cast(self) -> Result<$v, FeeVaultError> {
+                match self.try_into() {
+                    Ok(result) => Ok(result),
+                    Err(_) => {
+                        let caller = Location::caller();
+                        msg!("TypeCast is failed at {}:{}", caller.file(), caller.line());
+                        Err(FeeVaultError::TypeCastFailed)
+                    }
+                }
+            }
+        }
+    };
+}
+
+try_into_impl!(u8, FeeVaultType);
