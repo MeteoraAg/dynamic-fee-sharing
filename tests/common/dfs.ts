@@ -47,6 +47,7 @@ export async function createFeeVaultPda(
   const feeVault = deriveFeeVaultPdaAddress(baseKp.publicKey, tokenMint);
   const tokenVault = deriveTokenVaultAddress(feeVault);
   const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
+  const tokenProgram = svm.getAccount(tokenMint).owner;
   const tx = await program.methods
     .initializeFeeVaultPda(params)
     .accountsPartial({
@@ -57,7 +58,7 @@ export async function createFeeVaultPda(
       tokenMint,
       owner: vaultOwner,
       payer: admin.publicKey,
-      tokenProgram: TOKEN_PROGRAM_ID,
+      tokenProgram,
     })
     .transaction();
 
@@ -768,7 +769,8 @@ export async function reclaimDammV2Position(
   owner: Keypair,
   feeVault: PublicKey,
   positionNftAccount: PublicKey,
-  newOwner: PublicKey
+  newOwner: PublicKey,
+  errorCode?: number
 ) {
   const program = createProgram();
 
@@ -779,12 +781,11 @@ export async function reclaimDammV2Position(
       positionNftAccount,
       newOwner,
       owner: owner.publicKey,
-      tokenProgram: TOKEN_2022_PROGRAM_ID,
     })
     .transaction();
 
   tx.recentBlockhash = svm.latestBlockhash();
   tx.sign(owner);
 
-  sendTransactionOrExpectThrowError(svm, tx);
+  sendTransactionOrExpectThrowError(svm, tx, false, errorCode);
 }

@@ -17,12 +17,10 @@ import {
   claimDammV2Fee,
   claimDammV2Reward,
   createFeeVaultPda,
-  reclaimDammV2Position,
 } from "./common/dfs";
 import { BN } from "bn.js";
 import { expect } from "chai";
 import {
-  AccountLayout,
   AuthorityType,
   createSetAuthorityInstruction,
   TOKEN_2022_PROGRAM_ID,
@@ -214,58 +212,5 @@ describe("Fund by claiming damm v2", () => {
       postTokenVaultBalance.sub(preTokenVaultBalance).toString()
     );
     expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
-  });
-
-  it("Reclaim damm v2 position", async () => {
-    const { feeVault } = await createFeeVaultPda(
-      svm,
-      admin,
-      vaultOwner.publicKey,
-      tokenBMint,
-      {
-        padding: [],
-        users: [
-          {
-            address: shareHolder.publicKey,
-            share: 100,
-          },
-          {
-            address: PublicKey.unique(),
-            share: 100,
-          },
-        ],
-      }
-    );
-
-    const setAuthorityIx = createSetAuthorityInstruction(
-      positionNftAccount,
-      creator.publicKey,
-      AuthorityType.AccountOwner,
-      feeVault,
-      [],
-      TOKEN_2022_PROGRAM_ID
-    );
-    const assignOwnerTx = new Transaction().add(setAuthorityIx);
-    assignOwnerTx.recentBlockhash = svm.latestBlockhash();
-    assignOwnerTx.sign(creator);
-    sendTransactionOrExpectThrowError(svm, assignOwnerTx);
-
-    const preAccount = svm.getAccount(positionNftAccount);
-    const preOwner = AccountLayout.decode(preAccount.data).owner;
-    expect(preOwner.equals(feeVault)).to.be.true;
-
-    const user = Keypair.generate();
-
-    await reclaimDammV2Position(
-      svm,
-      vaultOwner,
-      feeVault,
-      positionNftAccount,
-      user.publicKey
-    );
-
-    const postAccount = svm.getAccount(positionNftAccount);
-    const postOwner = AccountLayout.decode(postAccount.data).owner;
-    expect(postOwner.equals(user.publicKey)).to.be.true;
   });
 });

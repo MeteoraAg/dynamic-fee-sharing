@@ -5,8 +5,8 @@ use crate::math::SafeCast;
 use crate::state::{FeeVault, FeeVaultType};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke_signed;
-use anchor_spl::token_2022::spl_token_2022;
-use anchor_spl::token_interface::{TokenAccount, TokenInterface};
+use anchor_spl::token_2022::{spl_token_2022, Token2022};
+use anchor_spl::token_interface::TokenAccount;
 
 #[event_cpi]
 #[derive(Accounts)]
@@ -21,7 +21,7 @@ pub struct ReclaimDammV2PositionCtx<'info> {
 
     pub owner: Signer<'info>,
 
-    pub token_program: Interface<'info, TokenInterface>,
+    pub token_program: Program<'info, Token2022>,
 }
 
 pub fn handle_reclaim_damm_v2_position(ctx: Context<ReclaimDammV2PositionCtx>) -> Result<()> {

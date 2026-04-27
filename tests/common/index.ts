@@ -101,7 +101,8 @@ export function createToken(
   svm: LiteSVM,
   payer: Keypair,
   mintAuthority: PublicKey,
-  freezeAuthority?: PublicKey
+  freezeAuthority?: PublicKey,
+  tokenProgram: PublicKey = TOKEN_PROGRAM_ID
 ): PublicKey {
   const mintKeypair = Keypair.generate();
   const rent = svm.getRent();
@@ -112,14 +113,15 @@ export function createToken(
     newAccountPubkey: mintKeypair.publicKey,
     space: MINT_SIZE,
     lamports: Number(lamports.toString()),
-    programId: TOKEN_PROGRAM_ID,
+    programId: tokenProgram,
   });
 
   const initializeMintIx = createInitializeMint2Instruction(
     mintKeypair.publicKey,
     TOKEN_DECIMALS,
     mintAuthority,
-    freezeAuthority
+    freezeAuthority,
+    tokenProgram
   );
 
   let transaction = new Transaction();
@@ -140,13 +142,16 @@ export function mintToken(
   toWallet: PublicKey,
   amount?: number
 ) {
-  const destination = getOrCreateAtA(svm, payer, mint, toWallet);
+  const tokenProgram = svm.getAccount(mint).owner;
+  const destination = getOrCreateAtA(svm, payer, mint, toWallet, tokenProgram);
 
   const mintIx = createMintToInstruction(
     mint,
     destination,
     mintAuthority.publicKey,
-    amount ?? RAW_AMOUNT
+    amount ?? RAW_AMOUNT,
+    [],
+    tokenProgram
   );
 
   let transaction = new Transaction();

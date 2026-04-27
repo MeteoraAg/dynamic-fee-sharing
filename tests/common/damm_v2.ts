@@ -64,17 +64,20 @@ export async function createDammV2Pool(
   const tokenAVault = deriveDammV2TokenVaultAddress(tokenAMint, pool);
   const tokenBVault = deriveDammV2TokenVaultAddress(tokenBMint, pool);
 
+  const tokenAProgram = svm.getAccount(tokenAMint).owner;
+  const tokenBProgram = svm.getAccount(tokenBMint).owner;
+
   const payerTokenA = getAssociatedTokenAddressSync(
     tokenAMint,
     creator.publicKey,
     true,
-    TOKEN_PROGRAM_ID
+    tokenAProgram
   );
   const payerTokenB = getAssociatedTokenAddressSync(
     tokenBMint,
     creator.publicKey,
     true,
-    TOKEN_PROGRAM_ID
+    tokenBProgram
   );
 
   const transaction = await program.methods
@@ -114,8 +117,8 @@ export async function createDammV2Pool(
       payerTokenA,
       payerTokenB,
       token2022Program: TOKEN_2022_PROGRAM_ID,
-      tokenAProgram: TOKEN_PROGRAM_ID,
-      tokenBProgram: TOKEN_PROGRAM_ID,
+      tokenAProgram,
+      tokenBProgram,
     })
     .transaction();
   transaction.recentBlockhash = svm.latestBlockhash();
