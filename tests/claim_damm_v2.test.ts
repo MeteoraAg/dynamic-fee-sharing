@@ -7,13 +7,17 @@ import {
   startSvm,
   warpToTimestamp,
 } from "./common/svm";
+import { createToken, getFeeVault, mintToken } from "./common";
 import {
-  createToken,
-  getFeeVault,
-  mintToken,
-} from "./common";
-import { createDammV2Pool, dammV2Swap, initializeAndFundReward } from "./common/damm_v2";
-import { claimDammV2Fee, claimDammV2Reward, createFeeVaultPda } from "./common/dfs";
+  createDammV2Pool,
+  dammV2Swap,
+  initializeAndFundReward,
+} from "./common/damm_v2";
+import {
+  claimDammV2Fee,
+  claimDammV2Reward,
+  createFeeVaultPda,
+} from "./common/dfs";
 import { BN } from "bn.js";
 import { expect } from "chai";
 import {
@@ -133,7 +137,6 @@ describe("Fund by claiming damm v2", () => {
     expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
   });
 
-
   it("Fund by claiming damm v2 reward", async () => {
     const { feeVault, tokenVault } = await createFeeVaultPda(
       svm,
@@ -177,10 +180,16 @@ describe("Fund by claiming damm v2", () => {
     const preTokenVaultBalance = getTokenBalance(svm, tokenVault);
 
     const rewardIndex = 0;
-    await initializeAndFundReward(svm, creator, dammV2Pool, rewardMint, rewardIndex);
+    await initializeAndFundReward(
+      svm,
+      creator,
+      dammV2Pool,
+      rewardMint,
+      rewardIndex
+    );
 
     warpToTimestamp(svm, new BN(12 * 60 * 60));
-    
+
     await claimDammV2Reward(
       svm,
       shareHolder,
