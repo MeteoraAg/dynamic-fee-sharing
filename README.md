@@ -9,7 +9,7 @@
 
 ### Dependencies
 
-- anchor 1.0.0
+- anchor 1.0.2
 - solana 3.1.10
 
 ### Build
