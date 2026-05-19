@@ -15,6 +15,9 @@ no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
 idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+custom-heap = []
+custom-panic = []
+anchor-debug = []
 
 
 [dependencies]
@@ -29,4 +32,7 @@ damm-v2 = { path = "../../libs/damm-v2" }
 dynamic-bonding-curve = { path = "../../libs/dynamic-bonding-curve" }
 
 [dev-dependencies]
-proptest = "1.2.0"
+proptest = "1.6"
+
+[lints]
+workspace = true

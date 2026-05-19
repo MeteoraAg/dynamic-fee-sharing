@@ -16,11 +16,11 @@ import {
   mintToken,
   TOKEN_DECIMALS,
 } from "./common";
-import { TOKEN_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
 import { BN } from "bn.js";
 import {
   AccountLayout,
   getAssociatedTokenAddressSync,
+  TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { expect } from "chai";
 

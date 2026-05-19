@@ -3,11 +3,7 @@ import { Keypair, PublicKey } from "@solana/web3.js";
 import { expect } from "chai";
 import { LiteSVM } from "litesvm";
 import { generateUsers, getTokenBalance, startSvm } from "./common/svm";
-import {
-  createToken,
-  getFeeVault,
-  mintToken,
-} from "./common";
+import { createToken, getFeeVault, mintToken } from "./common";
 import {
   buildDefaultCurve,
   createConfig,
@@ -44,7 +40,10 @@ describe("Funding by claiming in DBC", () => {
     payer = Keypair.generate();
     user = Keypair.generate();
     poolCreator = Keypair.generate();
-    [admin, payer, user, poolCreator, vaultOwner, shareHolder] = generateUsers(svm, 6);
+    [admin, payer, user, poolCreator, vaultOwner, shareHolder] = generateUsers(
+      svm,
+      6
+    );
     quoteMint = createToken(svm, admin, admin.publicKey, null);
   });
 
@@ -387,7 +386,7 @@ async function setupPool(
   });
 
   // transfer pool creator
-    await transferCreator(svm, virtualPool, poolCreator, feeVault);
+  await transferCreator(svm, virtualPool, poolCreator, feeVault);
 
   let virtualPoolState = getVirtualPoolState(svm, virtualPool);
   let configState = getVirtualConfigState(svm, virtualPoolConfig);

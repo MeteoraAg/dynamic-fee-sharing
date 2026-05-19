@@ -4,7 +4,7 @@ import {
   IdlAccounts,
   Program,
   Wallet,
-} from "@coral-xyz/anchor";
+} from "@anchor-lang/core";
 
 import { DynamicBondingCurve } from "./idl/dynamic_bonding_curve";
 import DynamicBondingCurveIDL from "../../idls/dynamic_bonding_curve.json";

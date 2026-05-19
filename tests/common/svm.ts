@@ -71,7 +71,7 @@ export function sendTransactionOrExpectThrowError(
     expect(result).instanceOf(TransactionMetadata);
   }
 
-  return result
+  return result;
 }
 
 export function generateUsers(svm: LiteSVM, numberOfUsers: number): Keypair[] {

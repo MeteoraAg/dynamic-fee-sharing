@@ -9,20 +9,20 @@
 
 ### Dependencies
 
-- anchor 0.31.0
-- solana 2.2.14
+- anchor 1.0.2
+- solana 3.1.10
 
 ### Build
 
 Program 
 
 ```
-anchor build
+anchor build --ignore-keys
 ```
 
 ### Test
 
 ```
-pnpm install
-pnpm test
+bun install
+bun test
 ```

@@ -41,7 +41,7 @@ pub fn handle_fund_fee(ctx: Context<FundFeeCtx>, max_amount: u64) -> Result<()> 
         &ctx.accounts.token_mint,
         &ctx.accounts.fund_token_vault,
         &ctx.accounts.token_vault,
-        &ctx.accounts.token_program,
+        &ctx.accounts.token_program.to_account_info(),
         amount,
     )?;
 

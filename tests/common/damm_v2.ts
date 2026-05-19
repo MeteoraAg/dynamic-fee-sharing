@@ -4,11 +4,17 @@ import {
   IdlAccounts,
   Program,
   Wallet,
-} from "@coral-xyz/anchor";
+} from "@anchor-lang/core";
 
 import { CpAmm } from "./idl/damm_v2";
 import CpAmmIDL from "../../idls/damm_v2.json";
-import { clusterApiUrl, Connection, Keypair, PublicKey, Transaction } from "@solana/web3.js";
+import {
+  clusterApiUrl,
+  Connection,
+  Keypair,
+  PublicKey,
+  Transaction,
+} from "@solana/web3.js";
 import { LiteSVM } from "litesvm";
 import {
   getAssociatedTokenAddressSync,
@@ -126,34 +132,47 @@ export async function createDammV2Pool(
   return { pool, position, positionNftAccount };
 }
 
-export async function initializeAndFundReward(svm: LiteSVM, creator: Keypair, pool: PublicKey, rewardMint: PublicKey, rewardIndex: number) {
+export async function initializeAndFundReward(
+  svm: LiteSVM,
+  creator: Keypair,
+  pool: PublicKey,
+  rewardMint: PublicKey,
+  rewardIndex: number
+) {
   const program = createDammV2Program();
 
-  const initTx = await program.methods.initializeReward(
-    rewardIndex,
-    new BN(60 * 60 * 24),
-    creator.publicKey
-  ).accountsPartial({
-    poolAuthority: deriveDammV2PoolAuthority(),
-    pool,
-    rewardVault: deriveDammV2RewardVault(pool, rewardIndex),
-    rewardMint,
-    signer: creator.publicKey,
-    payer: creator.publicKey,
-    tokenProgram: TOKEN_PROGRAM_ID
-  }).transaction()
+  const initTx = await program.methods
+    .initializeReward(rewardIndex, new BN(60 * 60 * 24), creator.publicKey)
+    .accountsPartial({
+      poolAuthority: deriveDammV2PoolAuthority(),
+      pool,
+      rewardVault: deriveDammV2RewardVault(pool, rewardIndex),
+      rewardMint,
+      signer: creator.publicKey,
+      payer: creator.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .transaction();
 
-  const amount = new BN(100_000_000)
-  const fundReward = await program.methods.fundReward(rewardIndex, amount, false).accountsPartial({
-    pool,
-    rewardMint,
-    rewardVault: deriveDammV2RewardVault(pool, rewardIndex),
-    funderTokenAccount: getAssociatedTokenAddressSync(rewardMint, creator.publicKey, true, TOKEN_PROGRAM_ID),
-    funder: creator.publicKey,
-    tokenProgram: TOKEN_PROGRAM_ID
-  }).transaction()
+  const amount = new BN(100_000_000);
+  const fundReward = await program.methods
+    .fundReward(rewardIndex, amount, false)
+    .accountsPartial({
+      pool,
+      rewardMint,
+      rewardVault: deriveDammV2RewardVault(pool, rewardIndex),
+      funderTokenAccount: getAssociatedTokenAddressSync(
+        rewardMint,
+        creator.publicKey,
+        true,
+        TOKEN_PROGRAM_ID
+      ),
+      funder: creator.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .transaction();
 
-  const transaction = new Transaction().add(initTx).add(fundReward)
+  const transaction = new Transaction().add(initTx).add(fundReward);
   transaction.recentBlockhash = svm.latestBlockhash();
   transaction.sign(creator);
 
@@ -217,7 +236,10 @@ export function deriveDammV2EventAuthority() {
   )[0];
 }
 
-export function deriveDammV2RewardVault(pool: PublicKey, rewardIndex: number): PublicKey {
+export function deriveDammV2RewardVault(
+  pool: PublicKey,
+  rewardIndex: number
+): PublicKey {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("reward_vault"), pool.toBuffer(), Buffer.from([rewardIndex])],
     DAMM_V2_PROGRAM_ID
