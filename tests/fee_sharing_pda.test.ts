@@ -24,11 +24,7 @@ import {
   updateUserShare,
 } from "./common";
 import { BN } from "bn.js";
-import {
-  AccountLayout,
-  getAssociatedTokenAddressSync,
-  TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
+import { AccountLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { expect } from "chai";
 
 import DynamicFeeSharingIDL from "../target/idl/dynamic_fee_sharing.json";

@@ -3,8 +3,8 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::const_pda;
 use crate::event::EvtClaimFee;
-use crate::state::FeeVault;
 use crate::state::DynamicFeeVaultLoader;
+use crate::state::FeeVault;
 use crate::utils::token::transfer_from_fee_vault;
 
 #[event_cpi]

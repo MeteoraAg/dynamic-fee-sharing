@@ -240,7 +240,7 @@ impl DynamicFeeVault<'_> {
 pub fn grow_dynamic_user<'info>(
     fee_vault_info: &AccountInfo<'info>,
     signer: &Signer<'info>,
-    system_program: &Program<'info, System>,
+    system_program: Pubkey,
 ) -> Result<()> {
     let new_len = fee_vault_info.data_len().safe_add(UserFee::INIT_SPACE)?;
     let rent = Rent::get()?;
@@ -250,7 +250,7 @@ pub fn grow_dynamic_user<'info>(
 
     system_program::transfer(
         CpiContext::new(
-            system_program.to_account_info(),
+            system_program,
             Transfer {
                 from: signer.to_account_info(),
                 to: fee_vault_info.clone(),
@@ -259,8 +259,7 @@ pub fn grow_dynamic_user<'info>(
         lamports_diff,
     )?;
 
-    // we won't read this new space before writing to it
-    fee_vault_info.realloc(new_len, false)?;
+    fee_vault_info.resize(new_len)?;
 
     Ok(())
 }
@@ -271,7 +270,7 @@ pub fn shrink_dynamic_user<'info>(
 ) -> Result<()> {
     let new_len = fee_vault_info.data_len().safe_sub(UserFee::INIT_SPACE)?;
 
-    fee_vault_info.realloc(new_len, false)?;
+    fee_vault_info.resize(new_len)?;
 
     let rent = Rent::get()?;
     let minimum_balance = rent.minimum_balance(new_len);

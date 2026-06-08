@@ -55,9 +55,9 @@ pub fn handle_claim_unclaimed_fee(ctx: Context<ClaimUnclaimedFeeCtx>) -> Result<
         transfer_from_fee_vault(
             ctx.accounts.fee_vault_authority.to_account_info(),
             &ctx.accounts.token_mint,
-            ctx.accounts.token_vault.to_account_info(),
-            ctx.accounts.user_token_vault.to_account_info(),
-            &ctx.accounts.token_program,
+            &ctx.accounts.token_vault,
+            &ctx.accounts.user_token_vault,
+            &ctx.accounts.token_program.to_account_info(),
             fee_being_claimed,
         )?;
 

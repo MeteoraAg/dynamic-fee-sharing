@@ -32,7 +32,7 @@ pub fn handle_add_user(ctx: Context<AddUserCtx>, share: u32) -> Result<()> {
         grow_dynamic_user(
             &fee_vault_info,
             &ctx.accounts.signer,
-            &ctx.accounts.system_program,
+            ctx.accounts.system_program.key(),
         )?;
     }
 

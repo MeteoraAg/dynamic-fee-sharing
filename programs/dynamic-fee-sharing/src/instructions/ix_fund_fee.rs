@@ -37,7 +37,7 @@ pub fn handle_fund_fee(ctx: Context<FundFeeCtx>, max_amount: u64) -> Result<()> 
     fee_vault.fund_fee(excluded_transfer_fee_amount)?;
 
     transfer_from_user(
-        ctx.accounts.funder.to_account_info(),
+        &ctx.accounts.funder,
         &ctx.accounts.token_mint,
         &ctx.accounts.fund_token_vault,
         &ctx.accounts.token_vault,

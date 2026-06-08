@@ -108,11 +108,13 @@ pub fn transfer_from_user<'a, 'info>(
     token_program: &'a AccountInfo<'info>,
     amount: u64,
 ) -> Result<()> {
+    let destination_account = destination_token_account.to_account_info();
+
     let instruction = spl_token_2022::instruction::transfer_checked(
         token_program.key,
-        token_owner_account.key,
+        &token_owner_account.key(),
         &token_mint.key(),
-        destination_token_account.key,
+        destination_account.key,
         authority.key,
         &[],
         amount,
@@ -120,10 +122,10 @@ pub fn transfer_from_user<'a, 'info>(
     )?;
 
     let account_infos = vec![
-        token_owner_account,
+        token_owner_account.to_account_info(),
         token_mint.to_account_info(),
-        destination_token_account,
-        authority,
+        destination_account.to_account_info(),
+        authority.to_account_info(),
     ];
 
     invoke_signed(&instruction, &account_infos, &[])?;
@@ -143,20 +145,20 @@ pub fn transfer_from_fee_vault<'info>(
 
     let instruction = spl_token_2022::instruction::transfer_checked(
         token_program.key,
-        token_vault.key,
+        &token_vault.key(),
         &token_mint.key(),
-        token_owner_account.key,
-        pool_authority.key,
+        &token_owner_account.key(),
+        &pool_authority.key(),
         &[],
         amount,
         token_mint.decimals,
     )?;
 
     let account_infos = vec![
-        token_vault,
+        token_vault.to_account_info(),
         token_mint.to_account_info(),
-        token_owner_account,
-        pool_authority,
+        token_owner_account.to_account_info(),
+        pool_authority.to_account_info(),
     ];
 
     invoke_signed(&instruction, &account_infos, &[&signer_seeds[..]])?;
