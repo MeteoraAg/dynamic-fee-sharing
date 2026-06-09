@@ -248,16 +248,18 @@ pub fn grow_dynamic_user<'info>(
         .minimum_balance(new_len)
         .saturating_sub(fee_vault_info.lamports());
 
-    system_program::transfer(
-        CpiContext::new(
-            system_program,
-            Transfer {
-                from: signer.to_account_info(),
-                to: fee_vault_info.clone(),
-            },
-        ),
-        lamports_diff,
-    )?;
+    if lamports_diff > 0 {
+        system_program::transfer(
+            CpiContext::new(
+                system_program,
+                Transfer {
+                    from: signer.to_account_info(),
+                    to: fee_vault_info.clone(),
+                },
+            ),
+            lamports_diff,
+        )?;
+    }
 
     fee_vault_info.resize(new_len)?;
 
