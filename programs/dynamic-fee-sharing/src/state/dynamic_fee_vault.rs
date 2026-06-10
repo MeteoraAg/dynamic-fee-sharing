@@ -16,11 +16,11 @@ pub struct DynamicFeeVault<'a> {
 }
 
 pub trait DynamicFeeVaultLoader<'info> {
-    fn load_content_mut(&self) -> Result<DynamicFeeVault>;
+    fn load_content_mut(&self) -> Result<DynamicFeeVault<'_>>;
 }
 
 impl<'info> DynamicFeeVaultLoader<'info> for AccountLoader<'info, FeeVault> {
-    fn load_content_mut(&self) -> Result<DynamicFeeVault> {
+    fn load_content_mut(&self) -> Result<DynamicFeeVault<'_>> {
         fee_vault_account_split(self)
     }
 }
