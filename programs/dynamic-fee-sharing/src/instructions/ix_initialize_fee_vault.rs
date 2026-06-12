@@ -1,4 +1,4 @@
-use crate::constants::MAX_USER;
+use crate::constants::{MAX_STATIC_USER, MIN_USER};
 use crate::error::FeeVaultError;
 use crate::event::EvtInitializeFeeVault;
 use crate::state::FeeVaultType;
@@ -12,7 +12,8 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct InitializeFeeVaultParameters {
-    pub padding: [u64; 8], // for future use
+    pub padding: [u8; 63], // for future use
+    pub mutable_flag: bool,
     pub users: Vec<UserShare>,
 }
 
@@ -24,22 +25,26 @@ pub struct UserShare {
 
 impl InitializeFeeVaultParameters {
     pub fn validate(&self) -> Result<()> {
-        let number_of_user = self.users.len();
+        let number_of_users = self.users.len();
         require!(
-            number_of_user >= 2 && number_of_user <= MAX_USER,
-            FeeVaultError::ExceededUser
+            number_of_users >= MIN_USER && number_of_users <= MAX_STATIC_USER,
+            FeeVaultError::InvalidNumberOfUsers
         );
-        for i in 0..number_of_user {
+        for (i, user) in self.users.iter().enumerate() {
+            require!(user.share > 0, FeeVaultError::InvalidFeeVaultParameters);
             require!(
-                self.users[i].share > 0,
-                FeeVaultError::InvalidFeeVaultParameters
+                user.address.ne(&Pubkey::default()),
+                FeeVaultError::InvalidUserAddress
             );
+            // prevent duplicate user address
+            // 10 comparisons at most when number_of_users is 5. n*(n-1)/2
             require!(
-                self.users[i].address.ne(&Pubkey::default()),
+                !self.users[i + 1..]
+                    .iter()
+                    .any(|u| u.address.eq(&user.address)),
                 FeeVaultError::InvalidUserAddress
             );
         }
-        // that is fine to leave user addresses are duplicated?
         Ok(())
     }
 }
@@ -58,7 +63,7 @@ pub struct InitializeFeeVaultCtx<'info> {
     /// CHECK: pool authority
     #[account(
             seeds = [
-                FEE_VAULT_AUTHORITY_PREFIX.as_ref(),
+                FEE_VAULT_AUTHORITY_PREFIX,
             ],
             bump,
         )]
@@ -67,7 +72,7 @@ pub struct InitializeFeeVaultCtx<'info> {
     #[account(
         init,
         seeds = [
-            TOKEN_VAULT_PREFIX.as_ref(),
+            TOKEN_VAULT_PREFIX,
             fee_vault.key().as_ref(),
         ],
         token::mint = token_mint,
@@ -108,6 +113,7 @@ pub fn handle_initialize_fee_vault(
         &Pubkey::default(),
         0,
         FeeVaultType::NonPdaAccount.into(),
+        params.mutable_flag.into(),
     )?;
 
     emit_cpi!(EvtInitializeFeeVault {
@@ -122,7 +128,7 @@ pub fn handle_initialize_fee_vault(
 }
 
 pub fn create_fee_vault<'info>(
-    token_mint: &Box<InterfaceAccount<'info, Mint>>,
+    token_mint: &InterfaceAccount<'info, Mint>,
     params: &InitializeFeeVaultParameters,
     fee_vault: &AccountLoader<'info, FeeVault>,
     owner: &Pubkey,
@@ -130,21 +136,23 @@ pub fn create_fee_vault<'info>(
     base: &Pubkey,
     fee_vault_bump: u8,
     fee_vault_type: u8,
+    mutable_flag: u8,
 ) -> Result<()> {
-    require!(is_supported_mint(&token_mint)?, FeeVaultError::InvalidMint);
+    require!(is_supported_mint(token_mint)?, FeeVaultError::InvalidMint);
 
     params.validate()?;
 
     let mut fee_vault = fee_vault.load_init()?;
     fee_vault.initialize(
         owner,
-        get_token_program_flags(&token_mint).into(),
+        get_token_program_flags(token_mint).into(),
         &token_mint.key(),
         token_vault,
         base,
         fee_vault_bump,
         fee_vault_type,
         &params.users,
+        mutable_flag,
     )?;
     Ok(())
 }

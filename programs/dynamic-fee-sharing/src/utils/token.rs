@@ -22,9 +22,7 @@ pub enum TokenProgramFlags {
     TokenProgram2022,
 }
 
-pub fn get_token_program_flags<'a, 'info>(
-    token_mint: &'a InterfaceAccount<'info, Mint>,
-) -> TokenProgramFlags {
+pub fn get_token_program_flags(token_mint: &InterfaceAccount<Mint>) -> TokenProgramFlags {
     let token_mint_ai = token_mint.to_account_info();
 
     if token_mint_ai.owner.eq(&anchor_spl::token::ID) {
@@ -60,8 +58,8 @@ pub struct TransferFeeExcludedAmount {
     pub transfer_fee: u64,
 }
 
-pub fn calculate_transfer_fee_excluded_amount<'info>(
-    token_mint: &InterfaceAccount<'info, Mint>,
+pub fn calculate_transfer_fee_excluded_amount(
+    token_mint: &InterfaceAccount<Mint>,
     transfer_fee_included_amount: u64,
 ) -> Result<TransferFeeExcludedAmount> {
     if let Some(epoch_transfer_fee) = get_epoch_transfer_fee(token_mint)? {
@@ -83,9 +81,7 @@ pub fn calculate_transfer_fee_excluded_amount<'info>(
     })
 }
 
-pub fn get_epoch_transfer_fee<'info>(
-    token_mint: &InterfaceAccount<'info, Mint>,
-) -> Result<Option<TransferFee>> {
+pub fn get_epoch_transfer_fee(token_mint: &InterfaceAccount<Mint>) -> Result<Option<TransferFee>> {
     let token_mint_info = token_mint.to_account_info();
     if *token_mint_info.owner == Token::id() {
         return Ok(None);
@@ -98,7 +94,7 @@ pub fn get_epoch_transfer_fee<'info>(
         token_mint_unpacked.get_extension::<extension::transfer_fee::TransferFeeConfig>()
     {
         let epoch = Clock::get()?.epoch;
-        return Ok(Some(transfer_fee_config.get_epoch_fee(epoch).clone()));
+        return Ok(Some(*transfer_fee_config.get_epoch_fee(epoch)));
     }
 
     Ok(None)
@@ -162,7 +158,7 @@ pub fn transfer_from_fee_vault<'info>(
         token_vault.to_account_info(),
         token_mint.to_account_info(),
         token_owner_account.to_account_info(),
-        pool_authority.to_account_info(),
+        pool_authority,
     ];
 
     invoke_signed(&instruction, &account_infos, &[&signer_seeds[..]])?;

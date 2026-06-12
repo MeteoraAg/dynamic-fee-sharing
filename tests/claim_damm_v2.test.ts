@@ -55,7 +55,7 @@ describe("Fund by claiming damm v2", () => {
       svm,
       creator,
       tokenAMint,
-      tokenBMint
+      tokenBMint,
     );
     dammV2Pool = createDmmV2PoolRes.pool;
     position = createDmmV2PoolRes.position;
@@ -70,6 +70,7 @@ describe("Fund by claiming damm v2", () => {
       tokenBMint,
       {
         padding: [],
+        mutableFlag: false,
         users: [
           {
             address: shareHolder.publicKey,
@@ -80,7 +81,7 @@ describe("Fund by claiming damm v2", () => {
             share: 100,
           },
         ],
-      }
+      },
     );
 
     const setAuthorityIx = createSetAuthorityInstruction(
@@ -89,7 +90,7 @@ describe("Fund by claiming damm v2", () => {
       AuthorityType.AccountOwner,
       feeVault,
       [],
-      TOKEN_2022_PROGRAM_ID
+      TOKEN_2022_PROGRAM_ID,
     );
     const assignOwnerTx = new Transaction().add(setAuthorityIx);
     assignOwnerTx.recentBlockhash = svm.latestBlockhash();
@@ -122,7 +123,7 @@ describe("Fund by claiming damm v2", () => {
       tokenVault,
       dammV2Pool,
       position,
-      positionNftAccount
+      positionNftAccount,
     );
 
     const postTokenVaultBalance = getTokenBalance(svm, tokenVault);
@@ -132,7 +133,7 @@ describe("Fund by claiming damm v2", () => {
     const postFeePerShare = vaultState.feePerShare;
 
     expect(postTotalFundedFee.sub(preTotalFundedFee).toString()).eq(
-      postTokenVaultBalance.sub(preTokenVaultBalance).toString()
+      postTokenVaultBalance.sub(preTokenVaultBalance).toString(),
     );
     expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
   });
@@ -145,6 +146,7 @@ describe("Fund by claiming damm v2", () => {
       rewardMint,
       {
         padding: [],
+        mutableFlag: false,
         users: [
           {
             address: shareHolder.publicKey,
@@ -155,7 +157,7 @@ describe("Fund by claiming damm v2", () => {
             share: 100,
           },
         ],
-      }
+      },
     );
 
     const setAuthorityIx = createSetAuthorityInstruction(
@@ -164,7 +166,7 @@ describe("Fund by claiming damm v2", () => {
       AuthorityType.AccountOwner,
       feeVault,
       [],
-      TOKEN_2022_PROGRAM_ID
+      TOKEN_2022_PROGRAM_ID,
     );
     const assignOwnerTx = new Transaction().add(setAuthorityIx);
     assignOwnerTx.recentBlockhash = svm.latestBlockhash();
@@ -185,7 +187,7 @@ describe("Fund by claiming damm v2", () => {
       creator,
       dammV2Pool,
       rewardMint,
-      rewardIndex
+      rewardIndex,
     );
 
     warpToTimestamp(svm, new BN(12 * 60 * 60));
@@ -199,7 +201,7 @@ describe("Fund by claiming damm v2", () => {
       dammV2Pool,
       position,
       positionNftAccount,
-      rewardIndex
+      rewardIndex,
     );
 
     const postTokenVaultBalance = getTokenBalance(svm, tokenVault);
@@ -209,7 +211,7 @@ describe("Fund by claiming damm v2", () => {
     const postFeePerShare = vaultState.feePerShare;
 
     expect(postTotalFundedFee.sub(preTotalFundedFee).toString()).eq(
-      postTokenVaultBalance.sub(preTokenVaultBalance).toString()
+      postTokenVaultBalance.sub(preTokenVaultBalance).toString(),
     );
     expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
   });

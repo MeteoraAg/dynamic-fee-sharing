@@ -42,7 +42,7 @@ describe("Funding by claiming in DBC", () => {
     poolCreator = Keypair.generate();
     [admin, payer, user, poolCreator, vaultOwner, shareHolder] = generateUsers(
       svm,
-      6
+      6,
     );
     quoteMint = createToken(svm, admin, admin.publicKey, null);
   });
@@ -55,6 +55,7 @@ describe("Funding by claiming in DBC", () => {
       quoteMint,
       {
         padding: [],
+        mutableFlag: false,
         users: [
           {
             address: shareHolder.publicKey,
@@ -65,7 +66,7 @@ describe("Funding by claiming in DBC", () => {
             share: 100,
           },
         ],
-      }
+      },
     );
 
     const { virtualPool, virtualPoolConfig } = await setupPool(
@@ -75,7 +76,7 @@ describe("Funding by claiming in DBC", () => {
       poolCreator,
       payer,
       feeVault,
-      quoteMint
+      quoteMint,
     );
 
     let vaultState = getFeeVault(svm, feeVault);
@@ -91,7 +92,7 @@ describe("Funding by claiming in DBC", () => {
       feeVault,
       tokenVault,
       virtualPoolConfig,
-      virtualPool
+      virtualPool,
     );
 
     const postTokenVaultBalance = getTokenBalance(svm, tokenVault);
@@ -101,7 +102,7 @@ describe("Funding by claiming in DBC", () => {
     const postFeePerShare = vaultState.feePerShare;
 
     expect(postTotalFundedFee.sub(preTotalFundedFee).toString()).eq(
-      postTokenVaultBalance.sub(preTokenVaultBalance).toString()
+      postTokenVaultBalance.sub(preTokenVaultBalance).toString(),
     );
     expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
   });
@@ -114,6 +115,7 @@ describe("Funding by claiming in DBC", () => {
       quoteMint,
       {
         padding: [],
+        mutableFlag: false,
         users: [
           {
             address: shareHolder.publicKey,
@@ -124,7 +126,7 @@ describe("Funding by claiming in DBC", () => {
             share: 100,
           },
         ],
-      }
+      },
     );
 
     const { virtualPool, virtualPoolConfig } = await setupPool(
@@ -134,7 +136,7 @@ describe("Funding by claiming in DBC", () => {
       poolCreator,
       payer,
       feeVault,
-      quoteMint
+      quoteMint,
     );
 
     let vaultState = getFeeVault(svm, feeVault);
@@ -151,7 +153,7 @@ describe("Funding by claiming in DBC", () => {
       feeVault,
       tokenVault,
       virtualPoolConfig,
-      virtualPool
+      virtualPool,
     );
 
     const postTokenVaultBalance = getTokenBalance(svm, tokenVault);
@@ -161,7 +163,7 @@ describe("Funding by claiming in DBC", () => {
     const postFeePerShare = vaultState.feePerShare;
 
     expect(postTotalFundedFee.sub(preTotalFundedFee).toString()).eq(
-      postTokenVaultBalance.sub(preTokenVaultBalance).toString()
+      postTokenVaultBalance.sub(preTokenVaultBalance).toString(),
     );
     expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
   });
@@ -174,6 +176,7 @@ describe("Funding by claiming in DBC", () => {
       quoteMint,
       {
         padding: [],
+        mutableFlag: false,
         users: [
           {
             address: shareHolder.publicKey,
@@ -184,7 +187,7 @@ describe("Funding by claiming in DBC", () => {
             share: 100,
           },
         ],
-      }
+      },
     );
 
     const { virtualPool, virtualPoolConfig } = await setupPool(
@@ -194,7 +197,7 @@ describe("Funding by claiming in DBC", () => {
       poolCreator,
       payer,
       feeVault,
-      quoteMint
+      quoteMint,
     );
 
     let vaultState = getFeeVault(svm, feeVault);
@@ -210,7 +213,7 @@ describe("Funding by claiming in DBC", () => {
       feeVault,
       tokenVault,
       virtualPoolConfig,
-      virtualPool
+      virtualPool,
     );
 
     const postTokenVaultBalance = getTokenBalance(svm, tokenVault);
@@ -220,7 +223,7 @@ describe("Funding by claiming in DBC", () => {
     const postFeePerShare = vaultState.feePerShare;
 
     expect(postTotalFundedFee.sub(preTotalFundedFee).toString()).eq(
-      postTokenVaultBalance.sub(preTokenVaultBalance).toString()
+      postTokenVaultBalance.sub(preTokenVaultBalance).toString(),
     );
     expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
   });
@@ -233,6 +236,7 @@ describe("Funding by claiming in DBC", () => {
       quoteMint,
       {
         padding: [],
+        mutableFlag: false,
         users: [
           {
             address: shareHolder.publicKey,
@@ -243,7 +247,7 @@ describe("Funding by claiming in DBC", () => {
             share: 100,
           },
         ],
-      }
+      },
     );
 
     const { virtualPool, virtualPoolConfig } = await setupPool(
@@ -253,7 +257,7 @@ describe("Funding by claiming in DBC", () => {
       poolCreator,
       payer,
       feeVault,
-      quoteMint
+      quoteMint,
     );
 
     let vaultState = getFeeVault(svm, feeVault);
@@ -269,7 +273,7 @@ describe("Funding by claiming in DBC", () => {
       feeVault,
       tokenVault,
       virtualPoolConfig,
-      virtualPool
+      virtualPool,
     );
 
     const postTokenVaultBalance = getTokenBalance(svm, tokenVault);
@@ -279,7 +283,7 @@ describe("Funding by claiming in DBC", () => {
     const postFeePerShare = vaultState.feePerShare;
 
     expect(postTotalFundedFee.sub(preTotalFundedFee).toString()).eq(
-      postTokenVaultBalance.sub(preTokenVaultBalance).toString()
+      postTokenVaultBalance.sub(preTokenVaultBalance).toString(),
     );
     expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
   });
@@ -292,6 +296,7 @@ describe("Funding by claiming in DBC", () => {
       quoteMint,
       {
         padding: [],
+        mutableFlag: false,
         users: [
           {
             address: shareHolder.publicKey,
@@ -302,7 +307,7 @@ describe("Funding by claiming in DBC", () => {
             share: 100,
           },
         ],
-      }
+      },
     );
 
     const { virtualPool, virtualPoolConfig } = await setupPool(
@@ -312,7 +317,7 @@ describe("Funding by claiming in DBC", () => {
       poolCreator,
       payer,
       feeVault,
-      quoteMint
+      quoteMint,
     );
 
     let vaultState = getFeeVault(svm, feeVault);
@@ -329,7 +334,7 @@ describe("Funding by claiming in DBC", () => {
       tokenVault,
       virtualPoolConfig,
       virtualPool,
-      0
+      0,
     );
 
     const postTokenVaultBalance = getTokenBalance(svm, tokenVault);
@@ -339,7 +344,7 @@ describe("Funding by claiming in DBC", () => {
     const postFeePerShare = vaultState.feePerShare;
 
     expect(postTotalFundedFee.sub(preTotalFundedFee).toString()).eq(
-      postTokenVaultBalance.sub(preTokenVaultBalance).toString()
+      postTokenVaultBalance.sub(preTokenVaultBalance).toString(),
     );
     expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
   });
@@ -352,7 +357,7 @@ async function setupPool(
   poolCreator: Keypair,
   payer: Keypair,
   feeVault: PublicKey,
-  quoteMint: PublicKey
+  quoteMint: PublicKey,
 ) {
   let instructionParams = buildDefaultCurve();
   const params: CreateConfigParams = {
@@ -368,7 +373,7 @@ async function setupPool(
     quoteMint,
     admin,
     user.publicKey,
-    instructionParams.migrationQuoteThreshold.mul(new BN(2)).toNumber()
+    instructionParams.migrationQuoteThreshold.mul(new BN(2)).toNumber(),
   );
 
   const virtualPoolConfig = await createConfig(svm, params);

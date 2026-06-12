@@ -10,6 +10,7 @@ pub mod event;
 pub mod math;
 pub mod state;
 pub mod utils;
+pub use utils::access_control::*;
 
 pub mod tests;
 declare_id!("dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh");
@@ -44,5 +45,32 @@ pub mod dynamic_fee_sharing {
 
     pub fn claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {
         instructions::handle_claim_fee(ctx, index)
+    }
+
+    pub fn update_operator(ctx: Context<UpdateOperatorCtx>) -> Result<()> {
+        instructions::handle_update_operator(ctx)
+    }
+
+    pub fn claim_unclaimed_fee(ctx: Context<ClaimUnclaimedFeeCtx>) -> Result<()> {
+        instructions::handle_claim_unclaimed_fee(ctx)
+    }
+
+    #[access_control(verify_is_mutable_and_operator(&ctx.accounts.fee_vault, ctx.accounts.signer.key))]
+    pub fn add_user(ctx: Context<AddUserCtx>, share: u32) -> Result<()> {
+        instructions::handle_add_user(ctx, share)
+    }
+
+    #[access_control(verify_is_mutable_and_operator(&ctx.accounts.fee_vault, ctx.accounts.signer.key))]
+    pub fn update_user_share(
+        ctx: Context<UpdateUserShareCtx>,
+        index: u8,
+        share: u32,
+    ) -> Result<()> {
+        instructions::handle_update_user_share(ctx, index, share)
+    }
+
+    #[access_control(verify_is_mutable_and_operator(&ctx.accounts.fee_vault, ctx.accounts.signer.key))]
+    pub fn remove_user(ctx: Context<RemoveUserCtx>, index: u8) -> Result<()> {
+        instructions::handle_remove_user(ctx, index)
     }
 }

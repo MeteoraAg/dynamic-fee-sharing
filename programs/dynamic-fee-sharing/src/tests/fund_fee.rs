@@ -1,5 +1,3 @@
-use std::u32;
-
 use crate::state::FeeVault;
 use proptest::prelude::*;
 

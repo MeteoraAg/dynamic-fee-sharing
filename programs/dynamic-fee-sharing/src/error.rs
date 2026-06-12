@@ -23,8 +23,8 @@ pub enum FeeVaultError {
     #[msg("Invalid user address")]
     InvalidUserAddress,
 
-    #[msg("Exceeded number of users allowed")]
-    ExceededUser,
+    #[msg("Invalid number of users")]
+    InvalidNumberOfUsers,
 
     #[msg("Invalid fee vault")]
     InvalidFeeVault,
@@ -34,4 +34,16 @@ pub enum FeeVaultError {
 
     #[msg("Invalid action")]
     InvalidAction,
+
+    #[msg("Invalid permission")]
+    InvalidPermission,
+
+    #[msg("Invalid operator address")]
+    InvalidOperatorAddress,
+
+    #[msg("Type cast error")]
+    TypeCastFailed,
+
+    #[msg("Fee vault is not mutable")]
+    FeeVaultNotMutable,
 }

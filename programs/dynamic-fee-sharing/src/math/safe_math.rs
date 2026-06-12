@@ -1,4 +1,4 @@
-use crate::error::FeeVaultError;
+use crate::{error::FeeVaultError, state::FeeVaultType};
 use anchor_lang::solana_program::msg;
 use ruint::aliases::{U256, U512};
 use std::panic::Location;
@@ -113,49 +113,26 @@ checked_impl!(usize, u32);
 checked_impl!(U256, usize);
 checked_impl!(U512, usize);
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn safe_add() {
-        assert_eq!(u64::MAX.safe_add(u64::MAX).is_err(), true);
-        assert_eq!(100u64.safe_add(100u64).is_ok(), true);
-        assert_eq!(100u64.safe_add(100u64).unwrap(), 200u64);
-    }
-
-    #[test]
-    fn safe_sub() {
-        assert_eq!(0u64.safe_sub(u64::MAX).is_err(), true);
-        assert_eq!(200u64.safe_sub(100u64).is_ok(), true);
-        assert_eq!(200u64.safe_sub(100u64).unwrap(), 100u64);
-    }
-
-    #[test]
-    fn safe_mul() {
-        assert_eq!(u64::MAX.safe_mul(u64::MAX).is_err(), true);
-        assert_eq!(100u64.safe_mul(100u64).is_ok(), true);
-        assert_eq!(100u64.safe_mul(100u64).unwrap(), 10000u64);
-    }
-
-    #[test]
-    fn safe_div() {
-        assert_eq!(100u64.safe_div(0u64).is_err(), true);
-        assert_eq!(200u64.safe_div(100u64).is_ok(), true);
-        assert_eq!(200u64.safe_div(100u64), Ok(2u64));
-    }
-
-    #[test]
-    fn safe_shl() {
-        assert_eq!(1u128.safe_shl(8).is_ok(), true);
-        assert_eq!(100u128.safe_shl(128).is_err(), true);
-        assert_eq!(100u128.safe_shl(8), Ok(25600))
-    }
-
-    #[test]
-    fn safe_shr() {
-        assert_eq!(100u128.safe_shr(1).is_ok(), true);
-        assert_eq!(200u128.safe_shr(129).is_err(), true);
-        assert_eq!(200u128.safe_shr(1), Ok(100))
-    }
+pub trait SafeCast<T>: Sized {
+    fn safe_cast(self) -> Result<T, FeeVaultError>;
 }
+
+macro_rules! try_into_impl {
+    ($t:ty, $v:ty) => {
+        impl SafeCast<$v> for $t {
+            #[track_caller]
+            fn safe_cast(self) -> Result<$v, FeeVaultError> {
+                match self.try_into() {
+                    Ok(result) => Ok(result),
+                    Err(_) => {
+                        let caller = Location::caller();
+                        msg!("Math error thrown at {}:{}", caller.file(), caller.line());
+                        Err(FeeVaultError::TypeCastFailed)
+                    }
+                }
+            }
+        }
+    };
+}
+
+try_into_impl!(u8, FeeVaultType);

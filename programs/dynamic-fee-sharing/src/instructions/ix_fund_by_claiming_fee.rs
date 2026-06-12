@@ -1,6 +1,7 @@
 use crate::constants::WHITELISTED_ACTIONS;
 use crate::event::EvtFundFee;
-use crate::state::FeeVault;
+use crate::math::SafeCast;
+use crate::state::{DynamicFeeVaultLoader, FeeVault, FeeVaultType};
 use crate::{error::FeeVaultError, math::SafeMath};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{instruction::Instruction, program::invoke_signed};
@@ -22,11 +23,11 @@ pub struct FundByClaimingFeeCtx<'info> {
     pub source_program: UncheckedAccount<'info>,
 }
 
-pub fn is_support_action<'info>(
+pub fn is_support_action(
     source_program: &Pubkey,
     discriminator: &[u8],
     token_vault: Pubkey,
-    remaining_accounts: &[AccountInfo<'info>],
+    remaining_accounts: &[AccountInfo],
 ) -> bool {
     for &(program, disc, token_vault_index) in WHITELISTED_ACTIONS.iter() {
         if program.eq(source_program) && disc.eq(discriminator) {
@@ -53,7 +54,7 @@ pub fn handle_fund_by_claiming_fee(
         FeeVaultError::InvalidAction
     );
 
-    let fee_vault = ctx.accounts.fee_vault.load()?;
+    let fee_vault = ctx.accounts.fee_vault.load_content_mut()?;
 
     require!(
         fee_vault.is_share_holder(ctx.accounts.signer.key),
@@ -62,9 +63,14 @@ pub fn handle_fund_by_claiming_fee(
 
     // support fee vault type is pda account
     require!(
-        fee_vault.fee_vault_type == 1,
+        fee_vault.fixed.fee_vault_type.safe_cast()? == FeeVaultType::PdaAccount,
         FeeVaultError::InvalidFeeVault
     );
+
+    let base = fee_vault.fixed.base;
+    let token_mint = fee_vault.fixed.token_mint;
+    let fee_vault_bump = fee_vault.fixed.fee_vault_bump;
+    drop(fee_vault);
 
     let before_token_vault_balance = ctx.accounts.token_vault.amount;
 
@@ -72,10 +78,10 @@ pub fn handle_fund_by_claiming_fee(
         .remaining_accounts
         .iter()
         .map(|acc| {
-            let is_signer = acc.key == &ctx.accounts.fee_vault.key();
+            let is_signer = acc.key.eq(&ctx.accounts.fee_vault.key());
             AccountMeta {
                 pubkey: *acc.key,
-                is_signer: is_signer,
+                is_signer,
                 is_writable: acc.is_writable,
             }
         })
@@ -87,11 +93,7 @@ pub fn handle_fund_by_claiming_fee(
         .map(|acc| AccountInfo { ..acc.clone() })
         .collect();
     // invoke instruction to amm
-    let base = fee_vault.base;
-    let token_mint = fee_vault.token_mint;
-    let fee_vault_bump = fee_vault.fee_vault_bump;
     let signer_seeds = fee_vault_seeds!(base, token_mint, fee_vault_bump);
-    drop(fee_vault);
 
     invoke_signed(
         &Instruction {

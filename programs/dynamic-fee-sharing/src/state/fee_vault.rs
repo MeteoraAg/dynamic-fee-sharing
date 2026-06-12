@@ -1,5 +1,5 @@
 use crate::{
-    constants::{MAX_USER, PRECISION_SCALE},
+    constants::{MAX_STATIC_USER, PRECISION_SCALE},
     error::FeeVaultError,
     instructions::UserShare,
     math::{mul_shr, shl_div, SafeMath},
@@ -33,14 +33,16 @@ pub struct FeeVault {
     pub token_flag: u8, // indicate whether token is spl-token or token2022
     pub fee_vault_type: u8,
     pub fee_vault_bump: u8,
-    pub padding_0: [u8; 13],
+    pub mutable_flag: u8, // indicate whether the fee vault is mutable by admin or operator, 0 or 1 only
+    pub padding_0: [u8; 12],
     pub total_share: u32,
     pub padding_1: [u8; 4],
     pub total_funded_fee: u64,
     pub fee_per_share: u128,
     pub base: Pubkey,
-    pub padding: [u128; 4],
-    pub users: [UserFee; MAX_USER],
+    pub operator: Pubkey, // operator is the account that can update a mutable fee vault. default: owner
+    pub padding: [u128; 2],
+    pub users: [UserFee; MAX_STATIC_USER],
 }
 const_assert_eq!(FeeVault::INIT_SPACE, 640);
 
@@ -51,10 +53,32 @@ pub struct UserFee {
     pub share: u32,
     pub padding_0: [u8; 4],
     pub fee_claimed: u64,
-    pub padding: [u8; 16], // padding for future use
+    pub pending_fee: u64,
+    pub padding: [u8; 8], // padding for future use
     pub fee_per_share_checkpoint: u128,
 }
 const_assert_eq!(UserFee::INIT_SPACE, 80);
+
+impl UserFee {
+    pub fn new(address: Pubkey, share: u32, fee_per_share_checkpoint: u128) -> Self {
+        Self {
+            address,
+            share,
+            fee_per_share_checkpoint,
+            ..Default::default()
+        }
+    }
+
+    pub fn get_total_pending_fee(&self, fee_per_share: u128) -> Result<u64> {
+        let delta = fee_per_share.safe_sub(self.fee_per_share_checkpoint)?;
+        let current_pending_fee = mul_shr(self.share.into(), delta, PRECISION_SCALE)
+            .and_then(|fee| fee.try_into().ok())
+            .ok_or_else(|| FeeVaultError::MathOverflow)?;
+
+        let total_pending_fee = self.pending_fee.safe_add(current_pending_fee)?;
+        Ok(total_pending_fee)
+    }
+}
 
 impl FeeVault {
     pub fn initialize(
@@ -67,24 +91,23 @@ impl FeeVault {
         fee_vault_bump: u8,
         fee_vault_type: u8,
         users: &[UserShare],
+        mutable_flag: u8,
     ) -> Result<()> {
         self.owner = *owner;
         self.token_flag = token_flag;
         self.token_mint = *token_mint;
         self.token_vault = *token_vault;
         let mut total_share = 0;
-        for i in 0..users.len() {
-            self.users[i] = UserFee {
-                address: users[i].address,
-                share: users[i].share,
-                ..Default::default()
-            };
-            total_share = total_share.safe_add(users[i].share)?;
+        for (i, user) in users.iter().enumerate() {
+            self.users[i] = UserFee::new(user.address, user.share, 0);
+            total_share = total_share.safe_add(user.share)?;
         }
         self.total_share = total_share;
         self.base = *base;
         self.fee_vault_bump = fee_vault_bump;
         self.fee_vault_type = fee_vault_type;
+        self.operator = *owner;
+        self.mutable_flag = mutable_flag;
 
         Ok(())
     }
@@ -98,31 +121,5 @@ impl FeeVault {
         self.fee_per_share = self.fee_per_share.safe_add(fee_per_share)?;
 
         Ok(())
-    }
-
-    pub fn validate_and_claim_fee(&mut self, index: u8, signer: &Pubkey) -> Result<u64> {
-        let user = self
-            .users
-            .get_mut(index as usize)
-            .ok_or_else(|| FeeVaultError::InvalidUserIndex)?;
-        require!(user.address.eq(signer), FeeVaultError::InvalidUserAddress);
-
-        let reward_per_share_delta = self.fee_per_share.safe_sub(user.fee_per_share_checkpoint)?;
-
-        let fee_being_claimed = mul_shr(user.share.into(), reward_per_share_delta, PRECISION_SCALE)
-            .ok_or_else(|| FeeVaultError::MathOverflow)?
-            .try_into()
-            .map_err(|_| FeeVaultError::MathOverflow)?;
-
-        user.fee_per_share_checkpoint = self.fee_per_share;
-        user.fee_claimed = user.fee_claimed.safe_add(fee_being_claimed)?;
-
-        Ok(fee_being_claimed)
-    }
-
-    pub fn is_share_holder(&self, signer: &Pubkey) -> bool {
-        self.users
-            .iter()
-            .any(|share_holder| share_holder.address.eq(signer))
     }
 }
