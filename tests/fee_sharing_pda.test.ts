@@ -804,11 +804,11 @@ async function fullFlow(
   );
   expect(userTokenAfter.sub(userTokenBefore).eq(removedUserBalance)).to.be.true;
 
-  // removed user token vault PDA should be closed
+  // removed user's unclaimed fee PDA should be closed
   const closedUserUnclaimedFee = svm.getAccount(userUnclaimedFee);
   expect(closedUserUnclaimedFee.lamports).eq(0);
 
-  // operator should have received rent back from removed user token vault
+  // operator should have received rent back from the closed unclaimed fee PDA
   const operatorBalanceAfter = svm.getBalance(operator.publicKey);
   expect(operatorBalanceAfter > operatorBalanceBefore).to.be.true;
 
@@ -833,6 +833,8 @@ async function fullFlow(
   // new user should not earn retroactive fees
   expect(newUserFee.pendingFee.toNumber()).eq(0);
   expect(newUserFee.feeClaimed.toNumber()).eq(0);
+  expect(newUserFee.feePerShareCheckpoint.eq(feeVaultAfterAdd.feePerShare)).to
+    .be.true;
 
   console.log("fund fee after adding new user");
   svm.expireBlockhash();
