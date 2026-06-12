@@ -158,7 +158,7 @@ pub fn transfer_from_fee_vault<'info>(
         token_vault.to_account_info(),
         token_mint.to_account_info(),
         token_owner_account.to_account_info(),
-        pool_authority.to_account_info(),
+        pool_authority,
     ];
 
     invoke_signed(&instruction, &account_infos, &[&signer_seeds[..]])?;

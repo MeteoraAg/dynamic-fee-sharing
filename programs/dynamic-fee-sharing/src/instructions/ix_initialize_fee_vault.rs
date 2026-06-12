@@ -30,22 +30,20 @@ impl InitializeFeeVaultParameters {
             number_of_users >= MIN_USER && number_of_users <= MAX_STATIC_USER,
             FeeVaultError::InvalidNumberOfUsers
         );
-        for i in 0..number_of_users {
+        for (i, user) in self.users.iter().enumerate() {
+            require!(user.share > 0, FeeVaultError::InvalidFeeVaultParameters);
             require!(
-                self.users[i].share > 0,
-                FeeVaultError::InvalidFeeVaultParameters
-            );
-            require!(
-                self.users[i].address.ne(&Pubkey::default()),
+                user.address.ne(&Pubkey::default()),
                 FeeVaultError::InvalidUserAddress
             );
-            // 15 inner loop at most when number_of_users is 5
-            for j in (i + 1)..number_of_users {
-                require!(
-                    self.users[i].address.ne(&self.users[j].address),
-                    FeeVaultError::InvalidUserAddress
-                );
-            }
+            // prevent duplicate user address
+            // 10 comparisons at most when number_of_users is 5. n*(n-1)/2
+            require!(
+                !self.users[i + 1..]
+                    .iter()
+                    .any(|u| u.address.eq(&user.address)),
+                FeeVaultError::InvalidUserAddress
+            );
         }
         Ok(())
     }

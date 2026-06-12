@@ -37,7 +37,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Update anchor to `1.0.2`
+
+### Breaking Changes
+
 - Prevent initializing a `FeeVault` with duplicate user address. This change affects both `initialize_fee_vault` and `initialize_fee_vault_pda` endpoints.
+- Rename error code `ExceededUser` to `InvalidNumberOfUsers`
 
 ## dynamic-fee-sharing [0.1.1] [PR #8](https://github.com/MeteoraAg/dynamic-fee-sharing/pull/8)
 

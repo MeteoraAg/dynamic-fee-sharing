@@ -54,23 +54,23 @@ pub fn handle_fund_by_claiming_fee(
         FeeVaultError::InvalidAction
     );
 
-    let vault = ctx.accounts.fee_vault.load_content_mut()?;
+    let fee_vault = ctx.accounts.fee_vault.load_content_mut()?;
 
     require!(
-        vault.is_share_holder(ctx.accounts.signer.key),
+        fee_vault.is_share_holder(ctx.accounts.signer.key),
         FeeVaultError::InvalidSigner
     );
 
     // support fee vault type is pda account
     require!(
-        vault.fee_vault.fee_vault_type.safe_cast()? == FeeVaultType::PdaAccount,
+        fee_vault.fixed.fee_vault_type.safe_cast()? == FeeVaultType::PdaAccount,
         FeeVaultError::InvalidFeeVault
     );
 
-    let base = vault.fee_vault.base;
-    let token_mint = vault.fee_vault.token_mint;
-    let fee_vault_bump = vault.fee_vault.fee_vault_bump;
-    drop(vault);
+    let base = fee_vault.fixed.base;
+    let token_mint = fee_vault.fixed.token_mint;
+    let fee_vault_bump = fee_vault.fixed.fee_vault_bump;
+    drop(fee_vault);
 
     let before_token_vault_balance = ctx.accounts.token_vault.amount;
 
