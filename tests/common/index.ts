@@ -43,6 +43,9 @@ export type UserShare = IdlTypes<DynamicFeeSharing>["userShare"];
 
 export type FeeVault = IdlAccounts<DynamicFeeSharing>["feeVault"];
 
+export type UserUnclaimedFee =
+  IdlAccounts<DynamicFeeSharing>["userUnclaimedFee"];
+
 export type DynamicFeeSharingProgram = Program<DynamicFeeSharing>;
 
 export const TOKEN_DECIMALS = 9;
@@ -70,6 +73,15 @@ export function getFeeVault(svm: LiteSVM, feeVault: PublicKey): FeeVault {
   const program = createProgram();
   const account = svm.getAccount(feeVault);
   return program.coder.accounts.decode("feeVault", Buffer.from(account.data));
+}
+
+export function getUserUnclaimedFee(svm: LiteSVM, userUnclaimedFee: PublicKey) {
+  const program = createProgram();
+  const account = svm.getAccount(userUnclaimedFee);
+  return program.coder.accounts.decode<UserUnclaimedFee>(
+    "userUnclaimedFee",
+    Buffer.from(account.data),
+  );
 }
 
 export const DISCRIMINATOR_SIZE = 8;
@@ -324,6 +336,70 @@ export function expectThrowsErrorCode(
   } else {
     throw new Error("Expected an error but didn't get one");
   }
+}
+
+export async function initializeFeeVault(params: {
+  svm: LiteSVM;
+  program: DynamicFeeSharingProgram;
+  feeVault: Keypair;
+  tokenMint: PublicKey;
+  owner: PublicKey;
+  payer: Keypair;
+  vaultParams: InitializeFeeVaultParameters;
+}) {
+  const { svm, program, feeVault, tokenMint, owner, payer, vaultParams } =
+    params;
+
+  const tx = await program.methods
+    .initializeFeeVault(vaultParams)
+    .accountsPartial({
+      feeVault: feeVault.publicKey,
+      feeVaultAuthority: deriveFeeVaultAuthorityAddress(),
+      tokenVault: deriveTokenVaultAddress(feeVault.publicKey),
+      tokenMint,
+      owner,
+      payer: payer.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .transaction();
+
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(payer, feeVault);
+
+  return svm.sendTransaction(tx);
+}
+
+export async function initializeFeeVaultPda(params: {
+  svm: LiteSVM;
+  program: DynamicFeeSharingProgram;
+  base: Keypair;
+  tokenMint: PublicKey;
+  owner: PublicKey;
+  payer: Keypair;
+  vaultParams: InitializeFeeVaultParameters;
+}) {
+  const { svm, program, base, tokenMint, owner, payer, vaultParams } = params;
+
+  const feeVault = deriveFeeVaultPdaAddress(base.publicKey, tokenMint);
+
+  const tx = await program.methods
+    .initializeFeeVaultPda(vaultParams)
+    .accountsPartial({
+      feeVault,
+      base: base.publicKey,
+      feeVaultAuthority: deriveFeeVaultAuthorityAddress(),
+      tokenVault: deriveTokenVaultAddress(feeVault),
+      tokenMint,
+      owner,
+      payer: payer.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .transaction();
+
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(payer, base);
+
+  return svm.sendTransaction(tx);
 }
 
 export async function fundFee(params: {
