@@ -1,4 +1,6 @@
-### Program to config fee sharing
+# Dynamic Fee Sharing
+
+Program to configure fee sharing.
 
 ## Deployments
 
