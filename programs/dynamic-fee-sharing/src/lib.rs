@@ -68,4 +68,9 @@ pub mod dynamic_fee_sharing {
     pub fn claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {
         instructions::handle_claim_fee(ctx, index)
     }
+
+    /// Accepts: DynamicFeeVault only.
+    pub fn add_user(ctx: Context<AddUserCtx>, share: u32) -> Result<()> {
+        instructions::handle_add_user(ctx, share)
+    }
 }

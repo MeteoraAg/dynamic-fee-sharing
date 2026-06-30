@@ -24,17 +24,19 @@ impl InitializeFeeVaultParameters {
             number_of_user >= MIN_USER && number_of_user <= max_user,
             FeeVaultError::ExceededUser
         );
-        for i in 0..number_of_user {
+        for (i, user) in self.users.iter().enumerate() {
+            require!(user.share > 0, FeeVaultError::InvalidFeeVaultParameters);
             require!(
-                self.users[i].share > 0,
-                FeeVaultError::InvalidFeeVaultParameters
-            );
-            require!(
-                self.users[i].address.ne(&Pubkey::default()),
+                user.address.ne(&Pubkey::default()),
                 FeeVaultError::InvalidUserAddress
             );
+
+            let duplicated = self.users[i + 1..]
+                .iter()
+                .any(|u| u.address.eq(&user.address));
+
+            require!(!duplicated, FeeVaultError::DuplicatedUserAddress);
         }
-        // that is fine to leave user addresses are duplicated?
         Ok(())
     }
 }

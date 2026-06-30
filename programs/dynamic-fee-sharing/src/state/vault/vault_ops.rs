@@ -44,6 +44,24 @@ pub trait VaultOps {
             .any(|share_holder| share_holder.address.eq(signer))
     }
 
+    fn validate_add_user(&self, user: &Pubkey, share: u32, max_user: usize) -> Result<()> {
+        require!(share > 0, FeeVaultError::InvalidFeeVaultParameters);
+        require!(
+            user.ne(&Pubkey::default()),
+            FeeVaultError::InvalidUserAddress
+        );
+
+        let (_, users) = self.get_header_and_users();
+        require!(users.len() < max_user, FeeVaultError::ExceededUser);
+
+        require!(
+            !self.is_share_holder(user),
+            FeeVaultError::DuplicatedUserAddress
+        );
+
+        Ok(())
+    }
+
     fn validate_and_claim_fee(&mut self, index: u8, signer: &Pubkey) -> Result<u64> {
         let (header, users) = self.get_header_and_users_mut();
 
