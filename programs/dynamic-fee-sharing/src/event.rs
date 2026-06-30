@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::InitializeFeeVaultParameters;
+use crate::params::InitializeFeeVaultParameters;
 
 #[event]
 pub struct EvtInitializeFeeVault {

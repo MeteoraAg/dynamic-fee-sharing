@@ -1,26 +1,28 @@
-use crate::constants::MAX_FEE_VAULT_USER;
-use crate::error::FeeVaultError;
+use crate::constants::seeds::DYNAMIC_FEE_VAULT_PREFIX;
+use crate::constants::seeds::{FEE_VAULT_AUTHORITY_PREFIX, TOKEN_VAULT_PREFIX};
+use crate::create_dynamic_fee_vault;
 use crate::event::EvtInitializeFeeVault;
 use crate::params::InitializeFeeVaultParameters;
-use crate::state::VaultType;
-use crate::utils::token::{get_token_program_flags, is_supported_mint};
-use crate::{
-    constants::seeds::{FEE_VAULT_AUTHORITY_PREFIX, TOKEN_VAULT_PREFIX},
-    state::FeeVault,
-};
+use crate::state::{DynamicFeeVault, VaultType};
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct InitializeFeeVaultCtx<'info> {
+#[instruction(params: InitializeFeeVaultParameters)]
+pub struct InitializeDynamicFeeVaultPdaCtx<'info> {
     #[account(
         init,
-        signer,
+        seeds = [
+            DYNAMIC_FEE_VAULT_PREFIX.as_ref(),
+            base.key().as_ref(),
+            token_mint.key().as_ref(),
+        ],
+        bump,
         payer = payer,
-        space = 8 + FeeVault::INIT_SPACE
+        space = DynamicFeeVault::space(params.users.len())
     )]
-    pub fee_vault: AccountLoader<'info, FeeVault>,
+    pub fee_vault: AccountLoader<'info, DynamicFeeVault>,
 
     /// CHECK: pool authority
     #[account(
@@ -53,6 +55,8 @@ pub struct InitializeFeeVaultCtx<'info> {
     /// CHECK: owner
     pub owner: UncheckedAccount<'info>,
 
+    pub base: Signer<'info>,
+
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -62,19 +66,19 @@ pub struct InitializeFeeVaultCtx<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handle_initialize_fee_vault(
-    ctx: Context<InitializeFeeVaultCtx>,
+pub fn handle_initialize_dynamic_fee_vault_pda(
+    ctx: Context<InitializeDynamicFeeVaultPdaCtx>,
     params: &InitializeFeeVaultParameters,
 ) -> Result<()> {
-    create_fee_vault(
+    create_dynamic_fee_vault(
         &ctx.accounts.token_mint,
         params,
         &ctx.accounts.fee_vault,
         ctx.accounts.owner.key,
         &ctx.accounts.token_vault.key(),
-        &Pubkey::default(),
-        0,
-        VaultType::NonPdaAccount.into(),
+        &ctx.accounts.base.key,
+        ctx.bumps.fee_vault,
+        VaultType::PdaAccount.into(),
     )?;
 
     emit_cpi!(EvtInitializeFeeVault {
@@ -82,36 +86,8 @@ pub fn handle_initialize_fee_vault(
         owner: ctx.accounts.owner.key(),
         token_mint: ctx.accounts.token_mint.key(),
         params: params.clone(),
-        base: Pubkey::default(),
+        base: ctx.accounts.base.key(),
     });
 
-    Ok(())
-}
-
-pub fn create_fee_vault<'info>(
-    token_mint: &Box<InterfaceAccount<'info, Mint>>,
-    params: &InitializeFeeVaultParameters,
-    fee_vault: &AccountLoader<'info, FeeVault>,
-    owner: &Pubkey,
-    token_vault: &Pubkey,
-    base: &Pubkey,
-    vault_bump: u8,
-    vault_type: u8,
-) -> Result<()> {
-    require!(is_supported_mint(&token_mint)?, FeeVaultError::InvalidMint);
-
-    params.validate(MAX_FEE_VAULT_USER)?;
-
-    let mut fee_vault = fee_vault.load_init()?;
-    fee_vault.initialize(
-        owner,
-        get_token_program_flags(&token_mint).into(),
-        &token_mint.key(),
-        token_vault,
-        base,
-        vault_bump,
-        vault_type,
-        &params.users,
-    )?;
     Ok(())
 }

@@ -99,8 +99,8 @@ describe("Fund by claiming damm v2", () => {
 
     let vaultState = getFeeVault(svm, feeVault);
 
-    const preTotalFundedFee = vaultState.totalFundedFee;
-    const preFeePerShare = vaultState.feePerShare;
+    const preTotalFundedFee = vaultState.fixed.totalFundedFee;
+    const preFeePerShare = vaultState.fixed.feePerShare;
 
     const preTokenVaultBalance = getTokenBalance(svm, tokenVault);
 
@@ -128,8 +128,8 @@ describe("Fund by claiming damm v2", () => {
     const postTokenVaultBalance = getTokenBalance(svm, tokenVault);
     vaultState = getFeeVault(svm, feeVault);
 
-    const postTotalFundedFee = vaultState.totalFundedFee;
-    const postFeePerShare = vaultState.feePerShare;
+    const postTotalFundedFee = vaultState.fixed.totalFundedFee;
+    const postFeePerShare = vaultState.fixed.feePerShare;
 
     expect(postTotalFundedFee.sub(preTotalFundedFee).toString()).eq(
       postTokenVaultBalance.sub(preTokenVaultBalance).toString()
@@ -174,8 +174,8 @@ describe("Fund by claiming damm v2", () => {
 
     let vaultState = getFeeVault(svm, feeVault);
 
-    const preTotalFundedFee = vaultState.totalFundedFee;
-    const preFeePerShare = vaultState.feePerShare;
+    const preTotalFundedFee = vaultState.fixed.totalFundedFee;
+    const preFeePerShare = vaultState.fixed.feePerShare;
 
     const preTokenVaultBalance = getTokenBalance(svm, tokenVault);
 
@@ -205,8 +205,8 @@ describe("Fund by claiming damm v2", () => {
     const postTokenVaultBalance = getTokenBalance(svm, tokenVault);
     vaultState = getFeeVault(svm, feeVault);
 
-    const postTotalFundedFee = vaultState.totalFundedFee;
-    const postFeePerShare = vaultState.feePerShare;
+    const postTotalFundedFee = vaultState.fixed.totalFundedFee;
+    const postFeePerShare = vaultState.fixed.feePerShare;
 
     expect(postTotalFundedFee.sub(preTotalFundedFee).toString()).eq(
       postTokenVaultBalance.sub(preTokenVaultBalance).toString()

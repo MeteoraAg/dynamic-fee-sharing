@@ -1,11 +1,12 @@
 use crate::constants::seeds::FEE_VAULT_PREFIX;
+use crate::create_fee_vault;
 use crate::event::EvtInitializeFeeVault;
-use crate::state::FeeVaultType;
+use crate::params::InitializeFeeVaultParameters;
+use crate::state::VaultType;
 use crate::{
     constants::seeds::{FEE_VAULT_AUTHORITY_PREFIX, TOKEN_VAULT_PREFIX},
     state::FeeVault,
 };
-use crate::{create_fee_vault, InitializeFeeVaultParameters};
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
@@ -79,7 +80,7 @@ pub fn handle_initialize_fee_vault_pda(
         &ctx.accounts.token_vault.key(),
         &ctx.accounts.base.key,
         ctx.bumps.fee_vault,
-        FeeVaultType::PdaAccount.into(),
+        VaultType::PdaAccount.into(),
     )?;
 
     emit_cpi!(EvtInitializeFeeVault {

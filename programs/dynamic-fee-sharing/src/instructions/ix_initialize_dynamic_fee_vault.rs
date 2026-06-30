@@ -1,26 +1,26 @@
-use crate::constants::MAX_FEE_VAULT_USER;
+use crate::constants::seeds::{FEE_VAULT_AUTHORITY_PREFIX, TOKEN_VAULT_PREFIX};
+use crate::constants::MAX_DYNAMIC_FEE_VAULT_USER;
 use crate::error::FeeVaultError;
 use crate::event::EvtInitializeFeeVault;
+use crate::math::SafeMath;
 use crate::params::InitializeFeeVaultParameters;
-use crate::state::VaultType;
+use crate::state::{DynamicFeeVault, UserFee, VaultType};
+use crate::utils::d_load_mut_unchecked;
 use crate::utils::token::{get_token_program_flags, is_supported_mint};
-use crate::{
-    constants::seeds::{FEE_VAULT_AUTHORITY_PREFIX, TOKEN_VAULT_PREFIX},
-    state::FeeVault,
-};
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct InitializeFeeVaultCtx<'info> {
+#[instruction(params: InitializeFeeVaultParameters)]
+pub struct InitializeDynamicFeeVaultCtx<'info> {
     #[account(
         init,
         signer,
         payer = payer,
-        space = 8 + FeeVault::INIT_SPACE
+        space = DynamicFeeVault::space(params.users.len())
     )]
-    pub fee_vault: AccountLoader<'info, FeeVault>,
+    pub fee_vault: AccountLoader<'info, DynamicFeeVault>,
 
     /// CHECK: pool authority
     #[account(
@@ -62,11 +62,11 @@ pub struct InitializeFeeVaultCtx<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handle_initialize_fee_vault(
-    ctx: Context<InitializeFeeVaultCtx>,
+pub fn handle_initialize_dynamic_fee_vault(
+    ctx: Context<InitializeDynamicFeeVaultCtx>,
     params: &InitializeFeeVaultParameters,
 ) -> Result<()> {
-    create_fee_vault(
+    create_dynamic_fee_vault(
         &ctx.accounts.token_mint,
         params,
         &ctx.accounts.fee_vault,
@@ -88,10 +88,10 @@ pub fn handle_initialize_fee_vault(
     Ok(())
 }
 
-pub fn create_fee_vault<'info>(
+pub fn create_dynamic_fee_vault<'info>(
     token_mint: &Box<InterfaceAccount<'info, Mint>>,
     params: &InitializeFeeVaultParameters,
-    fee_vault: &AccountLoader<'info, FeeVault>,
+    fee_vault: &AccountLoader<'info, DynamicFeeVault>,
     owner: &Pubkey,
     token_vault: &Pubkey,
     base: &Pubkey,
@@ -100,10 +100,11 @@ pub fn create_fee_vault<'info>(
 ) -> Result<()> {
     require!(is_supported_mint(&token_mint)?, FeeVaultError::InvalidMint);
 
-    params.validate(MAX_FEE_VAULT_USER)?;
+    // TODO: determine reasonable amount of user for vault at creation. 100 won't fit in a tx
+    params.validate(MAX_DYNAMIC_FEE_VAULT_USER)?;
 
-    let mut fee_vault = fee_vault.load_init()?;
-    fee_vault.initialize(
+    let mut vault = fee_vault.load_init()?;
+    vault.initialize_header(
         owner,
         get_token_program_flags(&token_mint).into(),
         &token_mint.key(),
@@ -111,7 +112,28 @@ pub fn create_fee_vault<'info>(
         base,
         vault_bump,
         vault_type,
-        &params.users,
-    )?;
+    );
+
+    drop(vault); // drop before re-borrowing the account data
+
+    let fee_vault_info = fee_vault.to_account_info();
+    let mut vault = d_load_mut_unchecked::<DynamicFeeVault, UserFee>(&fee_vault_info)?;
+
+    require!(
+        vault.dynamic.len() == params.users.len(),
+        FeeVaultError::InvalidFeeVaultParameters
+    );
+
+    let mut total_share = 0;
+    for (i, user) in params.users.iter().enumerate() {
+        vault.dynamic[i] = UserFee {
+            address: user.address,
+            share: user.share,
+            ..Default::default()
+        };
+        total_share = total_share.safe_add(user.share)?;
+    }
+    vault.fixed.total_share = total_share;
+
     Ok(())
 }

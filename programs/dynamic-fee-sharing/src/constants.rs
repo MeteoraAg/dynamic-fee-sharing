@@ -1,11 +1,14 @@
 use anchor_lang::prelude::Pubkey;
 use anchor_lang::Discriminator;
 
-pub const MAX_USER: usize = 5;
+pub const MIN_USER: usize = 2;
+pub const MAX_FEE_VAULT_USER: usize = 5;
+pub const MAX_DYNAMIC_FEE_VAULT_USER: usize = 100;
 pub const PRECISION_SCALE: u8 = 64;
 
 pub mod seeds {
     pub const FEE_VAULT_PREFIX: &[u8] = b"fee_vault";
+    pub const DYNAMIC_FEE_VAULT_PREFIX: &[u8] = b"dynamic_fee_vault";
     pub const FEE_VAULT_AUTHORITY_PREFIX: &[u8] = b"fee_vault_authority";
     pub const TOKEN_VAULT_PREFIX: &[u8] = b"token_vault";
 }

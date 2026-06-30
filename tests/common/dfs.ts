@@ -1,8 +1,10 @@
 import { AccountMeta, Keypair, PublicKey } from "@solana/web3.js";
+import BN from "bn.js";
 import CpAmmIDL from "../../idls/damm_v2.json";
 import DynamicBondingCurveIDL from "../../idls/dynamic_bonding_curve.json";
 import {
   createProgram,
+  deriveDynamicFeeVaultPdaAddress,
   deriveFeeVaultAuthorityAddress,
   deriveFeeVaultPdaAddress,
   deriveTokenVaultAddress,
@@ -67,6 +69,140 @@ export async function createFeeVaultPda(
   sendTransactionOrExpectThrowError(svm, tx);
 
   return { feeVault, tokenVault };
+}
+
+export async function createDynamicFeeVault(
+  svm: LiteSVM,
+  admin: Keypair,
+  vaultOwner: PublicKey,
+  tokenMint: PublicKey,
+  params: InitializeFeeVaultParameters
+): Promise<{
+  feeVault: PublicKey;
+  tokenVault: PublicKey;
+}> {
+  const program = createProgram();
+  const feeVaultKp = Keypair.generate();
+  const feeVault = feeVaultKp.publicKey;
+  const tokenVault = deriveTokenVaultAddress(feeVault);
+  const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
+  const tx = await program.methods
+    .initializeDynamicFeeVault(params)
+    .accountsPartial({
+      feeVault,
+      feeVaultAuthority,
+      tokenVault,
+      tokenMint,
+      owner: vaultOwner,
+      payer: admin.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .transaction();
+
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(admin, feeVaultKp);
+
+  sendTransactionOrExpectThrowError(svm, tx);
+
+  return { feeVault, tokenVault };
+}
+
+export async function createDynamicFeeVaultPda(
+  svm: LiteSVM,
+  admin: Keypair,
+  vaultOwner: PublicKey,
+  tokenMint: PublicKey,
+  params: InitializeFeeVaultParameters
+): Promise<{
+  feeVault: PublicKey;
+  tokenVault: PublicKey;
+}> {
+  const program = createProgram();
+  const baseKp = Keypair.generate();
+  const feeVault = deriveDynamicFeeVaultPdaAddress(baseKp.publicKey, tokenMint);
+  const tokenVault = deriveTokenVaultAddress(feeVault);
+  const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
+  const tx = await program.methods
+    .initializeDynamicFeeVaultPda(params)
+    .accountsPartial({
+      feeVault,
+      base: baseKp.publicKey,
+      feeVaultAuthority,
+      tokenVault,
+      tokenMint,
+      owner: vaultOwner,
+      payer: admin.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .transaction();
+
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(admin, baseKp);
+
+  sendTransactionOrExpectThrowError(svm, tx);
+
+  return { feeVault, tokenVault };
+}
+
+export async function fundFee(
+  svm: LiteSVM,
+  funder: Keypair,
+  feeVault: PublicKey,
+  tokenVault: PublicKey,
+  tokenMint: PublicKey,
+  amount: BN
+) {
+  const program = createProgram();
+  const fundTokenVault = getAssociatedTokenAddressSync(
+    tokenMint,
+    funder.publicKey
+  );
+  const tx = await program.methods
+    .fundFee(amount)
+    .accountsPartial({
+      feeVault,
+      tokenVault,
+      tokenMint,
+      fundTokenVault,
+      funder: funder.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .transaction();
+
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(funder);
+
+  sendTransactionOrExpectThrowError(svm, tx);
+}
+
+export async function claimFee(
+  svm: LiteSVM,
+  user: Keypair,
+  feeVault: PublicKey,
+  tokenVault: PublicKey,
+  tokenMint: PublicKey,
+  index: number
+): Promise<PublicKey> {
+  const program = createProgram();
+  const userTokenVault = getOrCreateAtA(svm, user, tokenMint, user.publicKey);
+  const tx = await program.methods
+    .claimFee(index)
+    .accountsPartial({
+      feeVault,
+      tokenMint,
+      tokenVault,
+      userTokenVault,
+      user: user.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .transaction();
+
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(user);
+
+  sendTransactionOrExpectThrowError(svm, tx);
+
+  return userTokenVault;
 }
 
 async function fundByClaimingFee(

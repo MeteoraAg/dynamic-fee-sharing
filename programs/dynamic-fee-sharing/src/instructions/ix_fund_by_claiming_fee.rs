@@ -1,6 +1,6 @@
 use crate::constants::WHITELISTED_ACTIONS;
 use crate::event::EvtFundFee;
-use crate::state::FeeVault;
+use crate::state::{FeeVault, VaultOps};
 use crate::{error::FeeVaultError, math::SafeMath};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{instruction::Instruction, program::invoke_signed};
@@ -61,10 +61,7 @@ pub fn handle_fund_by_claiming_fee(
     );
 
     // support fee vault type is pda account
-    require!(
-        fee_vault.fee_vault_type == 1,
-        FeeVaultError::InvalidFeeVault
-    );
+    require!(fee_vault.vault_type == 1, FeeVaultError::InvalidFeeVault);
 
     let before_token_vault_balance = ctx.accounts.token_vault.amount;
 
@@ -89,8 +86,8 @@ pub fn handle_fund_by_claiming_fee(
     // invoke instruction to amm
     let base = fee_vault.base;
     let token_mint = fee_vault.token_mint;
-    let fee_vault_bump = fee_vault.fee_vault_bump;
-    let signer_seeds = fee_vault_seeds!(base, token_mint, fee_vault_bump);
+    let vault_bump = fee_vault.vault_bump;
+    let signer_seeds = fee_vault_seeds!(base, token_mint, vault_bump);
     drop(fee_vault);
 
     invoke_signed(

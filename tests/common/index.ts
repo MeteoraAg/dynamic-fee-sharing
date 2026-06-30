@@ -41,6 +41,8 @@ export type UserShare = IdlTypes<DynamicFeeSharing>["userShare"];
 
 export type FeeVault = IdlAccounts<DynamicFeeSharing>["feeVault"];
 
+export type DynamicFeeVault = IdlAccounts<DynamicFeeSharing>["dynamicFeeVault"];
+
 export type DynamicFeeSharingProgram = Program<DynamicFeeSharing>;
 
 export const TOKEN_DECIMALS = 9;
@@ -68,6 +70,57 @@ export function getFeeVault(svm: LiteSVM, feeVault: PublicKey): FeeVault {
   const program = createProgram();
   const account = svm.getAccount(feeVault);
   return program.coder.accounts.decode("feeVault", Buffer.from(account.data));
+}
+
+// Decodes the fixed header of a DynamicFeeVault. The growable UserFee tail lives
+// past the header and is read separately via getDynamicFeeVaultUsers.
+export function getDynamicFeeVault(
+  svm: LiteSVM,
+  feeVault: PublicKey
+): DynamicFeeVault {
+  const program = createProgram();
+  const account = svm.getAccount(feeVault);
+  return program.coder.accounts.decode(
+    "dynamicFeeVault",
+    Buffer.from(account.data)
+  );
+}
+
+// Layout: [8 discriminator][DynamicFeeVault header (240)][UserFee; N (80 each)].
+const DYNAMIC_FEE_VAULT_TAIL_OFFSET = 8 + 240;
+const USER_FEE_SIZE = 80;
+
+export function getDynamicFeeVaultUsers(
+  svm: LiteSVM,
+  feeVault: PublicKey
+): { address: PublicKey; share: number; feeClaimed: BN }[] {
+  const account = svm.getAccount(feeVault);
+  const data = Buffer.from(account.data);
+  const users = [];
+  for (
+    let off = DYNAMIC_FEE_VAULT_TAIL_OFFSET;
+    off + USER_FEE_SIZE <= data.length;
+    off += USER_FEE_SIZE
+  ) {
+    users.push({
+      address: new PublicKey(data.subarray(off, off + 32)),
+      share: data.readUInt32LE(off + 32),
+      // UserFee.fee_claimed: u64 at offset 40 within the struct
+      feeClaimed: new BN(data.subarray(off + 40, off + 48), "le"),
+    });
+  }
+  return users;
+}
+
+export function deriveDynamicFeeVaultPdaAddress(
+  base: PublicKey,
+  tokenMint: PublicKey
+): PublicKey {
+  const program = createProgram();
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("dynamic_fee_vault"), base.toBuffer(), tokenMint.toBuffer()],
+    program.programId
+  )[0];
 }
 
 export function deriveFeeVaultAuthorityAddress(): PublicKey {
