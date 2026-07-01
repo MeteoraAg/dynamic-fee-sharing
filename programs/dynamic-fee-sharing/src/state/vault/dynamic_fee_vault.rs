@@ -98,7 +98,7 @@ pub fn add_user_and_grow<'info>(
 
     let vault = d_load_mut_checked::<DynamicFeeVault, UserFee>(&fee_vault_info)?;
     let fee_per_share = vault.fixed.fee_per_share;
-    vault.validate_add_user(user, share, MAX_DYNAMIC_FEE_VAULT_USER)?;
+    vault.validate_add_user(user, MAX_DYNAMIC_FEE_VAULT_USER)?;
     drop(vault);
 
     grow_user_tail(&fee_vault_info, payer, system_program)?;
@@ -108,12 +108,7 @@ pub fn add_user_and_grow<'info>(
         .dynamic
         .last_mut()
         .ok_or_else(|| error!(FeeVaultError::ExceededUser))?;
-    *last = UserFee {
-        address: *user,
-        share,
-        fee_per_share_checkpoint: fee_per_share,
-        ..Default::default()
-    };
+    *last = UserFee::new(*user, share, fee_per_share);
     vault.fixed.total_share = vault.fixed.total_share.safe_add(share)?;
 
     Ok(())

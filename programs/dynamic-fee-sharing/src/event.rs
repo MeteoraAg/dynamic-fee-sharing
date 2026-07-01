@@ -34,3 +34,11 @@ pub struct EvtAddUser {
     pub user: Pubkey,
     pub share: u32,
 }
+
+#[event]
+pub struct EvtUpdateUserShare {
+    pub fee_vault: Pubkey,
+    pub user: Pubkey,
+    pub old_share: u32,
+    pub new_share: u32,
+}

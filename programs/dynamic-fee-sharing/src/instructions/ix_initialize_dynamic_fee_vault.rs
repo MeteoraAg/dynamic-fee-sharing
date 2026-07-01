@@ -101,7 +101,7 @@ pub fn create_dynamic_fee_vault<'info>(
     require!(is_supported_mint(&token_mint)?, FeeVaultError::InvalidMint);
 
     // TODO: determine reasonable amount of user for vault at creation. 100 won't fit in a tx
-    params.validate(MAX_DYNAMIC_FEE_VAULT_USER)?;
+    params.validate(MAX_DYNAMIC_FEE_VAULT_USER, true)?;
 
     let mut vault = fee_vault.load_init()?;
     vault.initialize_header(
@@ -126,13 +126,10 @@ pub fn create_dynamic_fee_vault<'info>(
 
     let mut total_share = 0;
     for (i, user) in params.users.iter().enumerate() {
-        vault.dynamic[i] = UserFee {
-            address: user.address,
-            share: user.share,
-            ..Default::default()
-        };
+        vault.dynamic[i] = UserFee::new(user.address, user.share, vault.fixed.fee_per_share);
         total_share = total_share.safe_add(user.share)?;
     }
+    require!(total_share > 0, FeeVaultError::InvalidFeeVaultParameters);
     vault.fixed.total_share = total_share;
 
     Ok(())

@@ -73,4 +73,13 @@ pub mod dynamic_fee_sharing {
     pub fn add_user(ctx: Context<AddUserCtx>, share: u32) -> Result<()> {
         instructions::handle_add_user(ctx, share)
     }
+
+    /// Accepts: DynamicFeeVault only.
+    pub fn update_user_share(
+        ctx: Context<UpdateUserShareCtx>,
+        index: u8,
+        share: u32,
+    ) -> Result<()> {
+        instructions::handle_update_user_share(ctx, index, share)
+    }
 }

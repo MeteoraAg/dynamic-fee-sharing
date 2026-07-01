@@ -14,3 +14,5 @@ pub mod ix_fund_by_claiming_fee;
 pub use ix_fund_by_claiming_fee::*;
 pub mod ix_add_user;
 pub use ix_add_user::*;
+pub mod ix_update_user_share;
+pub use ix_update_user_share::*;

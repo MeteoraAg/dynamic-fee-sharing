@@ -1,7 +1,7 @@
 use crate::{
     constants::PRECISION_SCALE,
     error::FeeVaultError,
-    math::{mul_shr, shl_div, SafeMath},
+    math::{shl_div, SafeMath},
     state::{DynamicFeeVault, FeeVault, UserFee, VaultHeader},
     utils::DynamicAccountMut,
 };
@@ -44,8 +44,8 @@ pub trait VaultOps {
             .any(|share_holder| share_holder.address.eq(signer))
     }
 
-    fn validate_add_user(&self, user: &Pubkey, share: u32, max_user: usize) -> Result<()> {
-        require!(share > 0, FeeVaultError::InvalidFeeVaultParameters);
+    // allow new user to be added with 0 share
+    fn validate_add_user(&self, user: &Pubkey, max_user: usize) -> Result<()> {
         require!(
             user.ne(&Pubkey::default()),
             FeeVaultError::InvalidUserAddress
@@ -70,19 +70,42 @@ pub trait VaultOps {
             .ok_or_else(|| FeeVaultError::InvalidUserIndex)?;
         require!(user.address.eq(signer), FeeVaultError::InvalidUserAddress);
 
-        let reward_per_share_delta = header
-            .fee_per_share
-            .safe_sub(user.fee_per_share_checkpoint)?;
-
-        let fee_being_claimed = mul_shr(user.share.into(), reward_per_share_delta, PRECISION_SCALE)
-            .ok_or_else(|| FeeVaultError::MathOverflow)?
-            .try_into()
-            .map_err(|_| FeeVaultError::MathOverflow)?;
+        let fee_being_claimed = user.get_total_pending_fee(header.fee_per_share)?;
 
         user.fee_per_share_checkpoint = header.fee_per_share;
+        user.pending_fee = 0;
         user.fee_claimed = user.fee_claimed.safe_add(fee_being_claimed)?;
 
         Ok(fee_being_claimed)
+    }
+
+    /// returns old_share
+    fn validate_and_update_share(&mut self, index: u8, signer: &Pubkey, share: u32) -> Result<u32> {
+        let (header, users) = self.get_header_and_users_mut();
+
+        let user = users
+            .get_mut(index as usize)
+            .ok_or_else(|| FeeVaultError::InvalidUserIndex)?;
+
+        require!(
+            user.address.eq(signer) && signer.ne(&Pubkey::default()),
+            FeeVaultError::InvalidUserAddress
+        );
+
+        let old_share = user.share;
+
+        user.pending_fee = user.get_total_pending_fee(header.fee_per_share)?;
+        user.fee_per_share_checkpoint = header.fee_per_share;
+        user.share = share; // share can be set to 0
+
+        header.total_share = header.total_share.safe_sub(old_share)?.safe_add(share)?;
+
+        require!(
+            header.total_share > 0,
+            FeeVaultError::InvalidFeeVaultParameters
+        );
+
+        Ok(old_share)
     }
 }
 

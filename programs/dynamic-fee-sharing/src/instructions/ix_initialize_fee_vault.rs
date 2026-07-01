@@ -100,7 +100,7 @@ pub fn create_fee_vault<'info>(
 ) -> Result<()> {
     require!(is_supported_mint(&token_mint)?, FeeVaultError::InvalidMint);
 
-    params.validate(MAX_FEE_VAULT_USER)?;
+    params.validate(MAX_FEE_VAULT_USER, false)?;
 
     let mut fee_vault = fee_vault.load_init()?;
     fee_vault.initialize(

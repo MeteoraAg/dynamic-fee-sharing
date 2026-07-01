@@ -18,14 +18,16 @@ pub struct UserShare {
 }
 
 impl InitializeFeeVaultParameters {
-    pub fn validate(&self, max_user: usize) -> Result<()> {
+    pub fn validate(&self, max_user: usize, allow_zero_share: bool) -> Result<()> {
         let number_of_user = self.users.len();
         require!(
             number_of_user >= MIN_USER && number_of_user <= max_user,
             FeeVaultError::ExceededUser
         );
         for (i, user) in self.users.iter().enumerate() {
-            require!(user.share > 0, FeeVaultError::InvalidFeeVaultParameters);
+            if !allow_zero_share {
+                require!(user.share > 0, FeeVaultError::InvalidFeeVaultParameters);
+            }
             require!(
                 user.address.ne(&Pubkey::default()),
                 FeeVaultError::InvalidUserAddress
