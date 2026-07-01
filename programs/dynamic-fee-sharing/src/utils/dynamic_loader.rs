@@ -25,6 +25,18 @@ fn validate_discriminator_and_owner<'a, F: Discriminator + Owner>(
     Ok(())
 }
 
+pub fn is_account_initialized<'a, T: Pod + Owner + Discriminator>(
+    acc_info: &AccountInfo<'a>,
+) -> Result<bool> {
+    let data = acc_info.try_borrow_data()?;
+    if acc_info.owner.eq(&System::id()) && data.len() == 0 {
+        Ok(false)
+    } else {
+        validate_discriminator_and_owner::<T>(acc_info)?;
+        Ok(true)
+    }
+}
+
 #[derive(Debug)]
 pub struct DynamicAccountMut<'a, F, D> {
     pub fixed: RefMut<'a, F>,

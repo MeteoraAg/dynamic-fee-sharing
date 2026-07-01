@@ -87,6 +87,26 @@ fn grow_user_tail<'info>(
     Ok(())
 }
 
+fn shrink_user_tail<'info>(
+    fee_vault_info: &AccountInfo<'info>,
+    rent_receiver: &AccountInfo<'info>,
+) -> Result<()> {
+    let new_len = fee_vault_info.data_len().safe_sub(UserFee::INIT_SPACE)?;
+
+    fee_vault_info.resize(new_len)?;
+
+    let rent = Rent::get()?;
+    let minimum_balance = rent.minimum_balance(new_len);
+    let lamports_diff = fee_vault_info.lamports().safe_sub(minimum_balance)?;
+
+    if lamports_diff > 0 {
+        fee_vault_info.sub_lamports(lamports_diff)?;
+        rent_receiver.add_lamports(lamports_diff)?;
+    }
+
+    Ok(())
+}
+
 pub fn add_user_and_grow<'info>(
     fee_vault_loader: &AccountLoader<'info, DynamicFeeVault>,
     payer: &AccountInfo<'info>,
@@ -107,9 +127,26 @@ pub fn add_user_and_grow<'info>(
     let last = vault
         .dynamic
         .last_mut()
-        .ok_or_else(|| error!(FeeVaultError::ExceededUser))?;
+        .ok_or_else(|| error!(FeeVaultError::InvalidNumberOfUsers))?;
     *last = UserFee::new(*user, share, fee_per_share);
     vault.fixed.total_share = vault.fixed.total_share.safe_add(share)?;
 
     Ok(())
+}
+
+pub fn remove_user_and_shrink<'info>(
+    fee_vault_loader: &AccountLoader<'info, DynamicFeeVault>,
+    rent_receiver: &AccountInfo<'info>,
+    index: usize,
+    user: &Pubkey,
+) -> Result<u64> {
+    let fee_vault_info = fee_vault_loader.to_account_info();
+
+    let mut vault = d_load_mut_checked::<DynamicFeeVault, UserFee>(&fee_vault_info)?;
+    let unclaimed_fee = vault.validate_and_remove_user(index, user)?;
+    drop(vault);
+
+    shrink_user_tail(&fee_vault_info, rent_receiver)?;
+
+    Ok(unclaimed_fee)
 }

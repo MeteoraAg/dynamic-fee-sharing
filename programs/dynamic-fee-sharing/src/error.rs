@@ -26,8 +26,8 @@ pub enum FeeVaultError {
     #[msg("Duplicated user address")]
     DuplicatedUserAddress,
 
-    #[msg("Exceeded number of users allowed")]
-    ExceededUser,
+    #[msg("Invalid number of users")]
+    InvalidNumberOfUsers,
 
     #[msg("Invalid fee vault")]
     InvalidFeeVault,
@@ -37,4 +37,7 @@ pub enum FeeVaultError {
 
     #[msg("Invalid action")]
     InvalidAction,
+
+    #[msg("Total share must be more than 0")]
+    TotalShareIsZero,
 }

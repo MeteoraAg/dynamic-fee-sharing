@@ -129,7 +129,7 @@ pub fn create_dynamic_fee_vault<'info>(
         vault.dynamic[i] = UserFee::new(user.address, user.share, vault.fixed.fee_per_share);
         total_share = total_share.safe_add(user.share)?;
     }
-    require!(total_share > 0, FeeVaultError::InvalidFeeVaultParameters);
+    require!(total_share > 0, FeeVaultError::TotalShareIsZero);
     vault.fixed.total_share = total_share;
 
     Ok(())

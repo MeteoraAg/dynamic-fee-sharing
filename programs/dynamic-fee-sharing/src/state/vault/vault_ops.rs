@@ -1,5 +1,5 @@
 use crate::{
-    constants::PRECISION_SCALE,
+    constants::{MIN_USER, PRECISION_SCALE},
     error::FeeVaultError,
     math::{shl_div, SafeMath},
     state::{DynamicFeeVault, FeeVault, UserFee, VaultHeader},
@@ -52,7 +52,7 @@ pub trait VaultOps {
         );
 
         let (_, users) = self.get_header_and_users();
-        require!(users.len() < max_user, FeeVaultError::ExceededUser);
+        require!(users.len() < max_user, FeeVaultError::InvalidNumberOfUsers);
 
         require!(
             !self.is_share_holder(user),
@@ -62,11 +62,11 @@ pub trait VaultOps {
         Ok(())
     }
 
-    fn validate_and_claim_fee(&mut self, index: u8, signer: &Pubkey) -> Result<u64> {
+    fn validate_and_claim_fee(&mut self, index: usize, signer: &Pubkey) -> Result<u64> {
         let (header, users) = self.get_header_and_users_mut();
 
         let user = users
-            .get_mut(index as usize)
+            .get_mut(index)
             .ok_or_else(|| FeeVaultError::InvalidUserIndex)?;
         require!(user.address.eq(signer), FeeVaultError::InvalidUserAddress);
 
@@ -80,15 +80,20 @@ pub trait VaultOps {
     }
 
     /// returns old_share
-    fn validate_and_update_share(&mut self, index: u8, signer: &Pubkey, share: u32) -> Result<u32> {
+    fn validate_and_update_share(
+        &mut self,
+        index: usize,
+        user_being_updated: &Pubkey,
+        share: u32,
+    ) -> Result<u32> {
         let (header, users) = self.get_header_and_users_mut();
 
         let user = users
-            .get_mut(index as usize)
+            .get_mut(index)
             .ok_or_else(|| FeeVaultError::InvalidUserIndex)?;
 
         require!(
-            user.address.eq(signer) && signer.ne(&Pubkey::default()),
+            user.address.eq(user_being_updated) && user_being_updated.ne(&Pubkey::default()),
             FeeVaultError::InvalidUserAddress
         );
 
@@ -100,12 +105,46 @@ pub trait VaultOps {
 
         header.total_share = header.total_share.safe_sub(old_share)?.safe_add(share)?;
 
-        require!(
-            header.total_share > 0,
-            FeeVaultError::InvalidFeeVaultParameters
-        );
+        require!(header.total_share > 0, FeeVaultError::TotalShareIsZero);
 
         Ok(old_share)
+    }
+
+    /// returns unclaimed_fee
+    fn validate_and_remove_user(
+        &mut self,
+        index: usize,
+        user_being_removed: &Pubkey,
+    ) -> Result<u64> {
+        require!(
+            user_being_removed.ne(&Pubkey::default()),
+            FeeVaultError::InvalidUserAddress
+        );
+
+        let (header, users) = self.get_header_and_users_mut();
+
+        // user count includes the user being removed; must stay at least MIN_USER after removal
+        require!(users.len() > MIN_USER, FeeVaultError::InvalidNumberOfUsers);
+
+        let user = users
+            .get(index)
+            .ok_or_else(|| FeeVaultError::InvalidUserIndex)?;
+        require!(
+            user.address.eq(user_being_removed),
+            FeeVaultError::InvalidUserAddress
+        );
+
+        let unclaimed_fee = user.get_total_pending_fee(header.fee_per_share)?;
+
+        header.total_share = header.total_share.safe_sub(user.share)?;
+        require!(header.total_share > 0, FeeVaultError::TotalShareIsZero);
+
+        let last_index = users.len().safe_sub(1)?;
+        for i in index..last_index {
+            users[i] = users[i.safe_add(1)?];
+        }
+
+        Ok(unclaimed_fee)
     }
 }
 

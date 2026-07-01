@@ -11,6 +11,7 @@ pub mod seeds {
     pub const DYNAMIC_FEE_VAULT_PREFIX: &[u8] = b"dynamic_fee_vault";
     pub const FEE_VAULT_AUTHORITY_PREFIX: &[u8] = b"fee_vault_authority";
     pub const TOKEN_VAULT_PREFIX: &[u8] = b"token_vault";
+    pub const USER_UNCLAIMED_FEE_PREFIX: &[u8] = b"user_unclaimed_fee";
 }
 
 // (program_id, instruction, index_of_token_vault_account)

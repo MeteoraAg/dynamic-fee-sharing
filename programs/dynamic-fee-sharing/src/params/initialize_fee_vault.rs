@@ -22,7 +22,7 @@ impl InitializeFeeVaultParameters {
         let number_of_user = self.users.len();
         require!(
             number_of_user >= MIN_USER && number_of_user <= max_user,
-            FeeVaultError::ExceededUser
+            FeeVaultError::InvalidNumberOfUsers
         );
         for (i, user) in self.users.iter().enumerate() {
             if !allow_zero_share {

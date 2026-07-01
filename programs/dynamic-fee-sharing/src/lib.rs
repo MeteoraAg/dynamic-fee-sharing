@@ -82,4 +82,14 @@ pub mod dynamic_fee_sharing {
     ) -> Result<()> {
         instructions::handle_update_user_share(ctx, index, share)
     }
+
+    /// Accepts: DynamicFeeVault only.
+    pub fn remove_user(ctx: Context<RemoveUserCtx>, index: u8) -> Result<()> {
+        instructions::handle_remove_user(ctx, index)
+    }
+
+    /// Accepts: DynamicFeeVault only.
+    pub fn claim_unclaimed_fee(ctx: Context<ClaimUnclaimedFeeCtx>) -> Result<()> {
+        instructions::handle_claim_unclaimed_fee(ctx)
+    }
 }

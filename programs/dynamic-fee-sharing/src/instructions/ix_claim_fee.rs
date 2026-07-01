@@ -42,7 +42,8 @@ pub fn handle_claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {
         &ctx.accounts.token_mint.key(),
     )?;
 
-    let fee_being_claimed = fee_vault.validate_and_claim_fee(index, &ctx.accounts.user.key())?;
+    let fee_being_claimed =
+        fee_vault.validate_and_claim_fee(index.into(), &ctx.accounts.user.key())?;
     drop(fee_vault);
 
     if fee_being_claimed > 0 {

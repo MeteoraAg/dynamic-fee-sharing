@@ -25,7 +25,7 @@ pub fn handle_update_user_share(
 
     let fee_vault_info = ctx.accounts.fee_vault.to_account_info();
     let mut vault = d_load_mut_checked::<DynamicFeeVault, UserFee>(&fee_vault_info)?;
-    let old_share = vault.validate_and_update_share(index, &user, share)?;
+    let old_share = vault.validate_and_update_share(index.into(), &user, share)?;
     drop(vault);
 
     emit_cpi!(EvtUpdateUserShare {
