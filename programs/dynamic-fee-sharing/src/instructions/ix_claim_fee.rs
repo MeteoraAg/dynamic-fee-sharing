@@ -3,7 +3,6 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::const_pda;
 use crate::event::EvtClaimFee;
-use crate::state::VaultOps;
 use crate::utils::load_vault_mut;
 use crate::utils::token::transfer_from_fee_vault;
 
@@ -35,16 +34,15 @@ pub struct ClaimFeeCtx<'info> {
 
 pub fn handle_claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {
     let fee_vault_info = ctx.accounts.fee_vault.to_account_info();
-    let mut fee_vault = load_vault_mut(&fee_vault_info)?;
+    let mut vault = load_vault_mut(&fee_vault_info)?;
 
-    fee_vault.validate_token_accounts(
+    let is_token_0 = vault.validate_token_accounts(
         &ctx.accounts.token_vault.key(),
         &ctx.accounts.token_mint.key(),
     )?;
-
     let fee_being_claimed =
-        fee_vault.validate_and_claim_fee(index.into(), &ctx.accounts.user.key())?;
-    drop(fee_vault);
+        vault.validate_and_claim_fee(index.into(), is_token_0, &ctx.accounts.user.key())?;
+    drop(vault);
 
     if fee_being_claimed > 0 {
         transfer_from_fee_vault(

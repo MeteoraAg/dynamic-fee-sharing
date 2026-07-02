@@ -108,14 +108,15 @@ pub fn handle_fund_by_claiming_fee(
 
     if claimed_amount > 0 {
         let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
-        fee_vault.fund_fee(claimed_amount)?;
+        let fee_per_share = fee_vault.fund_fee(true, claimed_amount)?;
+        drop(fee_vault);
 
         emit_cpi!(EvtFundFee {
             source_program: ctx.accounts.source_program.key(),
             fee_vault: ctx.accounts.fee_vault.key(),
             payload,
             funded_amount: claimed_amount,
-            fee_per_share: fee_vault.fee_per_share,
+            fee_per_share,
         });
     }
     Ok(())

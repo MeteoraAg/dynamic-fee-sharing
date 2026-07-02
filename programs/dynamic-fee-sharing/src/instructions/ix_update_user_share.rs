@@ -1,6 +1,6 @@
 use crate::error::FeeVaultError;
 use crate::event::EvtUpdateUserShare;
-use crate::state::{DynamicFeeVault, UserFee, VaultOps};
+use crate::state::{DynamicFeeVault, DynamicUserFee};
 use crate::utils::d_load_mut_checked;
 use anchor_lang::prelude::*;
 
@@ -24,7 +24,7 @@ pub fn handle_update_user_share(
     let user = ctx.accounts.user.key();
 
     let fee_vault_info = ctx.accounts.fee_vault.to_account_info();
-    let mut vault = d_load_mut_checked::<DynamicFeeVault, UserFee>(&fee_vault_info)?;
+    let mut vault = d_load_mut_checked::<DynamicFeeVault, DynamicUserFee>(&fee_vault_info)?;
     let old_share = vault.validate_and_update_share(index.into(), &user, share)?;
     drop(vault);
 

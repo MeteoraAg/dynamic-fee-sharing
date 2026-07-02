@@ -10,10 +10,11 @@ use static_assertions::const_assert_eq;
 #[account(zero_copy)]
 #[derive(InitSpace, Debug, Default)]
 pub struct UserUnclaimedFee {
-    pub unclaimed_fee: u64,
+    pub unclaimed_fee_0: u64,
+    pub unclaimed_fee_1: u64,
     pub user: Pubkey,
     pub fee_vault: Pubkey,
-    pub padding: [u8; 32], // padding for future use
+    pub padding: [u8; 24],
 }
 
 const_assert_eq!(UserUnclaimedFee::INIT_SPACE, 104);
@@ -24,8 +25,9 @@ impl UserUnclaimedFee {
         self.fee_vault = fee_vault;
     }
 
-    pub fn add_unclaimed_fee(&mut self, unclaimed_fee: u64) -> Result<()> {
-        self.unclaimed_fee = self.unclaimed_fee.safe_add(unclaimed_fee)?;
+    pub fn add_unclaimed_fee(&mut self, unclaimed_fee_0: u64, unclaimed_fee_1: u64) -> Result<()> {
+        self.unclaimed_fee_0 = self.unclaimed_fee_0.safe_add(unclaimed_fee_0)?;
+        self.unclaimed_fee_1 = self.unclaimed_fee_1.safe_add(unclaimed_fee_1)?;
         Ok(())
     }
 
@@ -34,7 +36,8 @@ impl UserUnclaimedFee {
         bump: u8,
         fee_vault: Pubkey,
         user: Pubkey,
-        amount: u64,
+        unclaimed_fee_0: u64,
+        unclaimed_fee_1: u64,
         rent_payer: &AccountInfo<'a>,
         system_program: &AccountInfo<'a>,
     ) -> Result<()> {
@@ -54,11 +57,11 @@ impl UserUnclaimedFee {
             let mut user_unclaimed_fee =
                 load_mut_unchecked::<UserUnclaimedFee, UserUnclaimedFee>(user_unclaimed_fee)?;
             user_unclaimed_fee.initialize(user, fee_vault);
-            user_unclaimed_fee.add_unclaimed_fee(amount)?;
+            user_unclaimed_fee.add_unclaimed_fee(unclaimed_fee_0, unclaimed_fee_1)?;
         } else {
             let mut user_unclaimed_fee =
                 load_mut_checked::<UserUnclaimedFee, UserUnclaimedFee>(user_unclaimed_fee)?;
-            user_unclaimed_fee.add_unclaimed_fee(amount)?;
+            user_unclaimed_fee.add_unclaimed_fee(unclaimed_fee_0, unclaimed_fee_1)?;
         }
         Ok(())
     }

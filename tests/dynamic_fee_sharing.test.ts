@@ -26,7 +26,7 @@ describe("DynamicFeeVault", () => {
   let admin: Keypair;
   let funder: Keypair;
   let vaultOwner: Keypair;
-  let tokenMint: PublicKey;
+  let token0Mint: PublicKey;
 
   beforeEach(async () => {
     svm = new LiteSVM();
@@ -43,25 +43,25 @@ describe("DynamicFeeVault", () => {
     svm.airdrop(vaultOwner.publicKey, BigInt(LAMPORTS_PER_SOL));
     svm.airdrop(funder.publicKey, BigInt(LAMPORTS_PER_SOL));
 
-    tokenMint = createToken(svm, admin, admin.publicKey, null);
-    mintToken(svm, admin, tokenMint, admin, funder.publicKey);
+    token0Mint = createToken(svm, admin, admin.publicKey, null);
+    mintToken(svm, admin, token0Mint, admin, funder.publicKey);
   });
 
   it("Non-PDA variant", async () => {
     const users = generateUsers(svm, 6); // 6 users, beyond the fixed FeeVault cap of 5
     const params = makeParams(users);
 
-    const { feeVault, tokenVault } = await createDynamicFeeVault(
+    const { feeVault, token0Vault } = await createDynamicFeeVault(
       svm,
       admin,
       vaultOwner.publicKey,
-      tokenMint,
+      token0Mint,
       params
     );
 
-    await fullFlow(svm, funder, users, vaultOwner.publicKey, tokenMint, {
+    await fullFlow(svm, funder, users, vaultOwner.publicKey, token0Mint, {
       feeVault,
-      tokenVault,
+      token0Vault,
       params,
     });
   });
@@ -70,17 +70,17 @@ describe("DynamicFeeVault", () => {
     const users = generateUsers(svm, 6);
     const params = makeParams(users);
 
-    const { feeVault, tokenVault } = await createDynamicFeeVaultPda(
+    const { feeVault, token0Vault } = await createDynamicFeeVaultPda(
       svm,
       admin,
       vaultOwner.publicKey,
-      tokenMint,
+      token0Mint,
       params
     );
 
-    await fullFlow(svm, funder, users, vaultOwner.publicKey, tokenMint, {
+    await fullFlow(svm, funder, users, vaultOwner.publicKey, token0Mint, {
       feeVault,
-      tokenVault,
+      token0Vault,
       params,
     });
   });
@@ -98,14 +98,14 @@ async function fullFlow(
   funder: Keypair,
   users: Keypair[],
   vaultOwner: PublicKey,
-  tokenMint: PublicKey,
+  token0Mint: PublicKey,
   vault: {
     feeVault: PublicKey;
-    tokenVault: PublicKey;
+    token0Vault: PublicKey;
     params: InitializeFeeVaultParameters;
   }
 ) {
-  const { feeVault, tokenVault, params } = vault;
+  const { feeVault, token0Vault, params } = vault;
 
   const header = getDynamicFeeVault(svm, feeVault);
   const totalShare = params.users.reduce(
@@ -114,27 +114,29 @@ async function fullFlow(
   );
 
   expect(header.fixed.owner.toString()).eq(vaultOwner.toString());
-  expect(header.fixed.tokenMint.toString()).eq(tokenMint.toString());
-  expect(header.fixed.tokenVault.toString()).eq(tokenVault.toString());
+  expect(header.fixed.token0Mint.toString()).eq(token0Mint.toString());
+  expect(header.fixed.token0Vault.toString()).eq(token0Vault.toString());
   expect(header.fixed.totalShare).eq(totalShare.toNumber());
-  expect(header.fixed.totalFundedFee.toNumber()).eq(0);
+  expect(header.fixed.totalFundedFeeToken0.toNumber()).eq(0);
   expect(getDynamicFeeVaultUsers(svm, feeVault).length).eq(params.users.length);
 
   const fundAmount = new BN(100_000 * 10 ** TOKEN_DECIMALS);
-  await fundFee(svm, funder, feeVault, tokenVault, tokenMint, fundAmount);
+  await fundFee(svm, funder, feeVault, token0Vault, token0Mint, fundAmount);
 
-  expect(getTokenBalance(svm, tokenVault).toString()).eq(fundAmount.toString());
-  expect(getDynamicFeeVault(svm, feeVault).fixed.totalFundedFee.toString()).eq(
+  expect(getTokenBalance(svm, token0Vault).toString()).eq(
     fundAmount.toString()
   );
+  expect(
+    getDynamicFeeVault(svm, feeVault).fixed.totalFundedFeeToken0.toString()
+  ).eq(fundAmount.toString());
 
   for (let i = 0; i < users.length; i++) {
     const userTokenVault = await claimFee(
       svm,
       users[i],
       feeVault,
-      tokenVault,
-      tokenMint,
+      token0Vault,
+      token0Mint,
       i
     );
 

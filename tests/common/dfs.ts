@@ -7,6 +7,7 @@ import {
   deriveDynamicFeeVaultPdaAddress,
   deriveFeeVaultAuthorityAddress,
   deriveFeeVaultPdaAddress,
+  deriveTokenVault1Address,
   deriveTokenVaultAddress,
   getOrCreateAtA,
   InitializeFeeVaultParameters,
@@ -75,27 +76,35 @@ export async function createDynamicFeeVault(
   svm: LiteSVM,
   admin: Keypair,
   vaultOwner: PublicKey,
-  tokenMint: PublicKey,
-  params: InitializeFeeVaultParameters
+  token0Mint: PublicKey,
+  params: InitializeFeeVaultParameters,
+  token1Mint?: PublicKey
 ): Promise<{
   feeVault: PublicKey;
-  tokenVault: PublicKey;
+  token0Vault: PublicKey;
+  token1Vault: PublicKey | null;
 }> {
   const program = createProgram();
   const feeVaultKp = Keypair.generate();
   const feeVault = feeVaultKp.publicKey;
-  const tokenVault = deriveTokenVaultAddress(feeVault);
+  const token0Vault = deriveTokenVaultAddress(feeVault);
+  const token1Vault = token1Mint
+    ? deriveTokenVault1Address(feeVault, token1Mint)
+    : null;
   const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
   const tx = await program.methods
     .initializeDynamicFeeVault(params)
     .accountsPartial({
       feeVault,
       feeVaultAuthority,
-      tokenVault,
-      tokenMint,
+      token0Vault,
+      token0Mint,
+      token1Mint: token1Mint ?? null,
+      token1Vault,
+      token1Program: token1Mint ? TOKEN_PROGRAM_ID : null,
       owner: vaultOwner,
       payer: admin.publicKey,
-      tokenProgram: TOKEN_PROGRAM_ID,
+      token0Program: TOKEN_PROGRAM_ID,
     })
     .transaction();
 
@@ -104,23 +113,32 @@ export async function createDynamicFeeVault(
 
   sendTransactionOrExpectThrowError(svm, tx);
 
-  return { feeVault, tokenVault };
+  return { feeVault, token0Vault, token1Vault };
 }
 
 export async function createDynamicFeeVaultPda(
   svm: LiteSVM,
   admin: Keypair,
   vaultOwner: PublicKey,
-  tokenMint: PublicKey,
-  params: InitializeFeeVaultParameters
+  token0Mint: PublicKey,
+  params: InitializeFeeVaultParameters,
+  token1Mint?: PublicKey
 ): Promise<{
   feeVault: PublicKey;
-  tokenVault: PublicKey;
+  token0Vault: PublicKey;
+  token1Vault: PublicKey | null;
 }> {
   const program = createProgram();
   const baseKp = Keypair.generate();
-  const feeVault = deriveDynamicFeeVaultPdaAddress(baseKp.publicKey, tokenMint);
-  const tokenVault = deriveTokenVaultAddress(feeVault);
+  const feeVault = deriveDynamicFeeVaultPdaAddress(
+    baseKp.publicKey,
+    token0Mint,
+    token1Mint
+  );
+  const token0Vault = deriveTokenVaultAddress(feeVault);
+  const token1Vault = token1Mint
+    ? deriveTokenVault1Address(feeVault, token1Mint)
+    : null;
   const feeVaultAuthority = deriveFeeVaultAuthorityAddress();
   const tx = await program.methods
     .initializeDynamicFeeVaultPda(params)
@@ -128,11 +146,14 @@ export async function createDynamicFeeVaultPda(
       feeVault,
       base: baseKp.publicKey,
       feeVaultAuthority,
-      tokenVault,
-      tokenMint,
+      token0Vault,
+      token0Mint,
+      token1Mint: token1Mint ?? null,
+      token1Vault,
+      token1Program: token1Mint ? TOKEN_PROGRAM_ID : null,
       owner: vaultOwner,
       payer: admin.publicKey,
-      tokenProgram: TOKEN_PROGRAM_ID,
+      token0Program: TOKEN_PROGRAM_ID,
     })
     .transaction();
 
@@ -141,7 +162,7 @@ export async function createDynamicFeeVaultPda(
 
   sendTransactionOrExpectThrowError(svm, tx);
 
-  return { feeVault, tokenVault };
+  return { feeVault, token0Vault, token1Vault };
 }
 
 export async function fundFee(

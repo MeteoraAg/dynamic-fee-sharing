@@ -3,7 +3,6 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::error::FeeVaultError;
 use crate::event::EvtFundFee;
-use crate::state::VaultOps;
 use crate::utils::load_vault_mut;
 use crate::utils::token::{calculate_transfer_fee_excluded_amount, transfer_from_user};
 
@@ -36,16 +35,14 @@ pub fn handle_fund_fee(ctx: Context<FundFeeCtx>, max_amount: u64) -> Result<()> 
         calculate_transfer_fee_excluded_amount(&ctx.accounts.token_mint, amount)?.amount;
 
     let fee_vault_info = ctx.accounts.fee_vault.to_account_info();
-    let mut fee_vault = load_vault_mut(&fee_vault_info)?;
+    let mut vault = load_vault_mut(&fee_vault_info)?;
 
-    fee_vault.validate_token_accounts(
+    let is_token_0 = vault.validate_token_accounts(
         &ctx.accounts.token_vault.key(),
         &ctx.accounts.token_mint.key(),
     )?;
-
-    fee_vault.fund_fee(excluded_transfer_fee_amount)?;
-    let fee_per_share = fee_vault.get_header_and_users().0.fee_per_share;
-    drop(fee_vault);
+    let fee_per_share = vault.fund_fee(is_token_0, excluded_transfer_fee_amount)?;
+    drop(vault);
 
     transfer_from_user(
         &ctx.accounts.funder,

@@ -39,20 +39,21 @@ pub fn handle_remove_user(ctx: Context<RemoveUserCtx>, index: u8) -> Result<()> 
     let user = ctx.accounts.user.key();
     let fee_vault_key = ctx.accounts.fee_vault.key();
 
-    let unclaimed_fee = remove_user_and_shrink(
+    let (unclaimed_fee_0, unclaimed_fee_1) = remove_user_and_shrink(
         &ctx.accounts.fee_vault,
         &ctx.accounts.rent_receiver.to_account_info(),
         index.into(),
         &user,
     )?;
 
-    if unclaimed_fee > 0 {
+    if unclaimed_fee_0 > 0 || unclaimed_fee_1 > 0 {
         UserUnclaimedFee::init_if_needed_and_add(
             &ctx.accounts.user_unclaimed_fee.to_account_info(),
             ctx.bumps.user_unclaimed_fee,
             fee_vault_key,
             user,
-            unclaimed_fee,
+            unclaimed_fee_0,
+            unclaimed_fee_1,
             &ctx.accounts.owner.to_account_info(),
             &ctx.accounts.system_program.to_account_info(),
         )?;
@@ -61,7 +62,8 @@ pub fn handle_remove_user(ctx: Context<RemoveUserCtx>, index: u8) -> Result<()> 
     emit_cpi!(EvtRemoveUser {
         fee_vault: fee_vault_key,
         user,
-        unclaimed_fee,
+        unclaimed_fee_0,
+        unclaimed_fee_1,
     });
 
     Ok(())

@@ -86,9 +86,9 @@ export function getDynamicFeeVault(
   );
 }
 
-// Layout: [8 discriminator][DynamicFeeVault header (240)][UserFee; N (80 each)].
-const DYNAMIC_FEE_VAULT_TAIL_OFFSET = 8 + 240;
-const USER_FEE_SIZE = 80;
+// Layout: [8 discriminator][DynamicFeeVault header (320)][DynamicUserFee; N (128 each)].
+const DYNAMIC_FEE_VAULT_TAIL_OFFSET = 8 + 320;
+const USER_FEE_SIZE = 128;
 
 export function getDynamicFeeVaultUsers(
   svm: LiteSVM,
@@ -105,20 +105,27 @@ export function getDynamicFeeVaultUsers(
     users.push({
       address: new PublicKey(data.subarray(off, off + 32)),
       share: data.readUInt32LE(off + 32),
-      // UserFee.fee_claimed: u64 at offset 40 within the struct
+      // DynamicUserFee.fee_claimed_token_0: u64 at offset 40
       feeClaimed: new BN(data.subarray(off + 40, off + 48), "le"),
     });
   }
   return users;
 }
 
+// absent token1Mint = disabled slot 1, seeded as PublicKey.default (all zeros)
 export function deriveDynamicFeeVaultPdaAddress(
   base: PublicKey,
-  tokenMint: PublicKey
+  token0Mint: PublicKey,
+  token1Mint?: PublicKey
 ): PublicKey {
   const program = createProgram();
   return PublicKey.findProgramAddressSync(
-    [Buffer.from("dynamic_fee_vault"), base.toBuffer(), tokenMint.toBuffer()],
+    [
+      Buffer.from("dynamic_fee_vault"),
+      base.toBuffer(),
+      token0Mint.toBuffer(),
+      (token1Mint ?? PublicKey.default).toBuffer(),
+    ],
     program.programId
   )[0];
 }
@@ -127,6 +134,18 @@ export function deriveFeeVaultAuthorityAddress(): PublicKey {
   const program = createProgram();
   return PublicKey.findProgramAddressSync(
     [Buffer.from("fee_vault_authority")],
+    program.programId
+  )[0];
+}
+
+// slot-1 token vault is keyed by mint; slot 0 keeps [prefix, fee_vault] for FeeVault parity
+export function deriveTokenVault1Address(
+  feeVault: PublicKey,
+  token1Mint: PublicKey
+): PublicKey {
+  const program = createProgram();
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("token_vault"), feeVault.toBuffer(), token1Mint.toBuffer()],
     program.programId
   )[0];
 }
