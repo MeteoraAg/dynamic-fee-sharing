@@ -50,7 +50,8 @@ export async function createDammV2Pool(
   svm: LiteSVM,
   creator: Keypair,
   tokenAMint: PublicKey,
-  tokenBMint: PublicKey
+  tokenBMint: PublicKey,
+  collectFeeMode: number = 1 // 0 = both tokens, 1 = onlyB (default)
 ): Promise<{
   pool: PublicKey;
   position: PublicKey;
@@ -102,7 +103,7 @@ export async function createDammV2Pool(
       liquidity: LIQUIDITY_DELTA,
       sqrtPrice: INIT_PRICE,
       activationType: 0,
-      collectFeeMode: 1, // collect fee mode: onlyB
+      collectFeeMode, // 0 = both tokens, 1 = onlyB
       activationPoint: null,
     })
     .accountsPartial({

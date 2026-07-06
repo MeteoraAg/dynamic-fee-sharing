@@ -1,7 +1,8 @@
-use crate::constants::MAX_USER;
+use crate::constants::MAX_FEE_VAULT_USER;
 use crate::error::FeeVaultError;
 use crate::event::EvtInitializeFeeVault;
-use crate::state::FeeVaultType;
+use crate::params::InitializeFeeVaultParameters;
+use crate::state::VaultType;
 use crate::utils::token::{get_token_program_flags, is_supported_mint};
 use crate::{
     constants::seeds::{FEE_VAULT_AUTHORITY_PREFIX, TOKEN_VAULT_PREFIX},
@@ -9,40 +10,6 @@ use crate::{
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
-
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
-pub struct InitializeFeeVaultParameters {
-    pub padding: [u64; 8], // for future use
-    pub users: Vec<UserShare>,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, Copy)]
-pub struct UserShare {
-    pub address: Pubkey,
-    pub share: u32,
-}
-
-impl InitializeFeeVaultParameters {
-    pub fn validate(&self) -> Result<()> {
-        let number_of_user = self.users.len();
-        require!(
-            number_of_user >= 2 && number_of_user <= MAX_USER,
-            FeeVaultError::ExceededUser
-        );
-        for i in 0..number_of_user {
-            require!(
-                self.users[i].share > 0,
-                FeeVaultError::InvalidFeeVaultParameters
-            );
-            require!(
-                self.users[i].address.ne(&Pubkey::default()),
-                FeeVaultError::InvalidUserAddress
-            );
-        }
-        // that is fine to leave user addresses are duplicated?
-        Ok(())
-    }
-}
 
 #[event_cpi]
 #[derive(Accounts)]
@@ -107,7 +74,7 @@ pub fn handle_initialize_fee_vault(
         &ctx.accounts.token_vault.key(),
         &Pubkey::default(),
         0,
-        FeeVaultType::NonPdaAccount.into(),
+        VaultType::NonPdaAccount.into(),
     )?;
 
     emit_cpi!(EvtInitializeFeeVault {
@@ -128,12 +95,12 @@ pub fn create_fee_vault<'info>(
     owner: &Pubkey,
     token_vault: &Pubkey,
     base: &Pubkey,
-    fee_vault_bump: u8,
-    fee_vault_type: u8,
+    vault_bump: u8,
+    vault_type: u8,
 ) -> Result<()> {
     require!(is_supported_mint(&token_mint)?, FeeVaultError::InvalidMint);
 
-    params.validate()?;
+    params.validate(MAX_FEE_VAULT_USER, false)?;
 
     let mut fee_vault = fee_vault.load_init()?;
     fee_vault.initialize(
@@ -142,8 +109,8 @@ pub fn create_fee_vault<'info>(
         &token_mint.key(),
         token_vault,
         base,
-        fee_vault_bump,
-        fee_vault_type,
+        vault_bump,
+        vault_type,
         &params.users,
     )?;
     Ok(())

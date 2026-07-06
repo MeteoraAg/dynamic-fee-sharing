@@ -3,14 +3,15 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::const_pda;
 use crate::event::EvtClaimFee;
-use crate::state::FeeVault;
+use crate::utils::load_vault_mut;
 use crate::utils::token::transfer_from_fee_vault;
 
 #[event_cpi]
 #[derive(Accounts)]
 pub struct ClaimFeeCtx<'info> {
-    #[account(mut, has_one = token_vault, has_one = token_mint)]
-    pub fee_vault: AccountLoader<'info, FeeVault>,
+    /// CHECK: FeeVault or DynamicFeeVault
+    #[account(mut)]
+    pub fee_vault: UncheckedAccount<'info>,
 
     /// CHECK: fee vault authority
     #[account(
@@ -32,8 +33,16 @@ pub struct ClaimFeeCtx<'info> {
 }
 
 pub fn handle_claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {
-    let mut fee_vault = ctx.accounts.fee_vault.load_mut()?;
-    let fee_being_claimed = fee_vault.validate_and_claim_fee(index, &ctx.accounts.user.key())?;
+    let fee_vault_info = ctx.accounts.fee_vault.to_account_info();
+    let mut vault = load_vault_mut(&fee_vault_info)?;
+
+    let is_token_0 = vault.validate_token_accounts(
+        &ctx.accounts.token_vault.key(),
+        &ctx.accounts.token_mint.key(),
+    )?;
+    let fee_being_claimed =
+        vault.validate_and_claim_fee(index.into(), is_token_0, &ctx.accounts.user.key())?;
+    drop(vault);
 
     if fee_being_claimed > 0 {
         transfer_from_fee_vault(

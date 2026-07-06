@@ -18,6 +18,7 @@ idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 custom-heap = []
 custom-panic = []
 anchor-debug = []
+local = []
 
 
 [dependencies]

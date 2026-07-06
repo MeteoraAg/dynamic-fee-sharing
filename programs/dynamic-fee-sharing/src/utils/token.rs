@@ -22,6 +22,29 @@ pub enum TokenProgramFlags {
     TokenProgram2022,
 }
 
+// A trait (not a free fn) is required here. Anchor expands optional-account seeds in
+// three scopes: Option-wrapped, unwrapped, and idl-build. Method-call syntax resolves in
+// all three (autoderef + the IDL seeds parser treating the leading ident as an account
+// reference); a free fn fails to compile in at least one of them.
+pub trait KeyOrDefault {
+    fn key_or_default(&self) -> Pubkey;
+}
+
+impl KeyOrDefault for InterfaceAccount<'_, Mint> {
+    fn key_or_default(&self) -> Pubkey {
+        self.key()
+    }
+}
+
+/// None yields Pubkey::default (constraints are skipped then anyway)
+impl KeyOrDefault for Option<Box<InterfaceAccount<'_, Mint>>> {
+    fn key_or_default(&self) -> Pubkey {
+        self.as_ref()
+            .map(|token_mint| token_mint.key())
+            .unwrap_or_default()
+    }
+}
+
 pub fn get_token_program_flags<'a, 'info>(
     token_mint: &'a InterfaceAccount<'info, Mint>,
 ) -> TokenProgramFlags {

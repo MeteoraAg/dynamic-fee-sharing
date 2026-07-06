@@ -93,7 +93,7 @@ describe("Fee vault pda sharing", () => {
     tx.recentBlockhash = svm.latestBlockhash();
     tx.sign(admin, baseKp);
 
-    const errorCode = getProgramErrorCodeHexString("ExceededUser");
+    const errorCode = getProgramErrorCodeHexString("InvalidNumberOfUsers");
     expectThrowsErrorCode(svm.sendTransaction(tx), errorCode);
   });
 
@@ -126,7 +126,7 @@ describe("Fee vault pda sharing", () => {
     tx.recentBlockhash = svm.latestBlockhash();
     tx.sign(admin, baseKp);
 
-    const errorCode = getProgramErrorCodeHexString("ExceededUser");
+    const errorCode = getProgramErrorCodeHexString("InvalidNumberOfUsers");
     expectThrowsErrorCode(svm.sendTransaction(tx), errorCode);
   });
 
@@ -193,15 +193,15 @@ async function fullFlow(
 
   if (sendRes instanceof TransactionMetadata) {
     const feeVaultState = getFeeVault(svm, feeVault);
-    expect(feeVaultState.owner.toString()).eq(vaultOwner.toString());
-    expect(feeVaultState.tokenMint.toString()).eq(tokenMint.toString());
-    expect(feeVaultState.tokenVault.toString()).eq(tokenVault.toString());
+    expect(feeVaultState.fixed.owner.toString()).eq(vaultOwner.toString());
+    expect(feeVaultState.fixed.tokenMint.toString()).eq(tokenMint.toString());
+    expect(feeVaultState.fixed.tokenVault.toString()).eq(tokenVault.toString());
     const totalShare = params.users.reduce(
       (a, b) => a.add(new BN(b.share)),
       new BN(0)
     );
-    expect(feeVaultState.totalShare).eq(totalShare.toNumber());
-    expect(feeVaultState.totalFundedFee.toNumber()).eq(0);
+    expect(feeVaultState.fixed.totalShare).eq(totalShare.toNumber());
+    expect(feeVaultState.fixed.totalFundedFee.toNumber()).eq(0);
 
     const totalUsers = feeVaultState.users.filter(
       (item) => !item.address.equals(PublicKey.default)
@@ -242,7 +242,7 @@ async function fullFlow(
       account.data
     ).amount.toString();
     expect(tokenVaultBalance).eq(fundAmount.toString());
-    expect(feeVaultState.totalFundedFee.toString()).eq(fundAmount.toString());
+    expect(feeVaultState.fixed.totalFundedFee.toString()).eq(fundAmount.toString());
   } else {
     console.log(fundFeeRes.meta().logs());
   }
