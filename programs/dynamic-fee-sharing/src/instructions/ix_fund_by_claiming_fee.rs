@@ -30,6 +30,8 @@ pub fn is_support_action<'info>(
 ) -> bool {
     for &(program, disc, token_vault_index) in WHITELISTED_ACTIONS.iter() {
         if program.eq(source_program) && disc.eq(discriminator) {
+            // only validate the token_vault_account for the FeeVault.token_mint
+            // for action with two tokens, other token is not validated by design
             if let Some(token_vault_account) = remaining_accounts.get(token_vault_index) {
                 return token_vault.eq(token_vault_account.key);
             }
