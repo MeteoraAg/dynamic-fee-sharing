@@ -58,3 +58,31 @@ pub struct EvtClaimUnclaimedFee {
     pub claimed_fee_0: u64,
     pub claimed_fee_1: u64,
 }
+
+#[event]
+pub struct EvtFundByWhitelistedAction {
+    pub fee_vault: Pubkey,
+    pub source_program: Pubkey,
+    pub whitelisted_action: Pubkey,
+    pub funded_amount_0: u64,
+    pub funded_amount_1: u64,
+    pub fee_per_share_0: u128,
+    pub fee_per_share_1: u128,
+    pub payload: Vec<u8>,
+}
+
+#[event]
+pub struct EvtCreateWhitelistedAction {
+    pub whitelisted_action: Pubkey,
+    pub source_program: Pubkey,
+    pub discriminator: [u8; 8],
+    pub token_0_vault_index: u8,
+    pub token_1_vault_index: u8,
+}
+
+#[event]
+pub struct EvtCloseWhitelistedAction {
+    pub whitelisted_action: Pubkey,
+    pub source_program: Pubkey,
+    pub discriminator: [u8; 8],
+}

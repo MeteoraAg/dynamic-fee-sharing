@@ -1,4 +1,4 @@
-use crate::constants::WHITELISTED_ACTIONS;
+use crate::constants::STATIC_WHITELISTED_ACTIONS;
 use crate::event::EvtFundFee;
 use crate::state::{FeeVault, VaultOps};
 use crate::{error::FeeVaultError, math::SafeMath};
@@ -28,7 +28,7 @@ pub fn is_support_action<'info>(
     token_vault: Pubkey,
     remaining_accounts: &[AccountInfo<'info>],
 ) -> bool {
-    for &(program, disc, token_vault_index) in WHITELISTED_ACTIONS.iter() {
+    for &(program, disc, token_vault_index) in STATIC_WHITELISTED_ACTIONS.iter() {
         if program.eq(source_program) && disc.eq(discriminator) {
             if let Some(token_vault_account) = remaining_accounts.get(token_vault_index) {
                 return token_vault.eq(token_vault_account.key);

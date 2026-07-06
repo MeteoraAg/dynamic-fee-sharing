@@ -1,12 +1,14 @@
 use anchor_lang::prelude::*;
 #[macro_use]
 pub mod macros;
+pub mod access_control;
+use access_control::*;
 pub mod constants;
 pub mod error;
 pub mod instructions;
 pub use instructions::*;
 pub mod params;
-pub use params::InitializeFeeVaultParameters;
+pub use params::{CreateWhitelistedActionParameters, InitializeFeeVaultParameters};
 pub mod const_pda;
 pub mod event;
 pub mod math;
@@ -91,5 +93,27 @@ pub mod dynamic_fee_sharing {
     /// Accepts: DynamicFeeVault only.
     pub fn claim_unclaimed_fee(ctx: Context<ClaimUnclaimedFeeCtx>) -> Result<()> {
         instructions::handle_claim_unclaimed_fee(ctx)
+    }
+
+    #[access_control(is_admin(ctx.accounts.admin.key))]
+    pub fn create_whitelisted_action(
+        ctx: Context<CreateWhitelistedActionCtx>,
+        params: CreateWhitelistedActionParameters,
+    ) -> Result<()> {
+        instructions::handle_create_whitelisted_action(ctx, &params)
+    }
+
+    #[access_control(is_admin(ctx.accounts.admin.key))]
+    pub fn close_whitelisted_action(ctx: Context<CloseWhitelistedActionCtx>) -> Result<()> {
+        instructions::handle_close_whitelisted_action(ctx)
+    }
+
+    /// Accepts: DynamicFeeVault only.
+    pub fn fund_by_whitelisted_action(
+        ctx: Context<FundByWhitelistedActionCtx>,
+        discriminator: [u8; 8],
+        payload: Vec<u8>,
+    ) -> Result<()> {
+        instructions::handle_fund_by_whitelisted_action(ctx, discriminator, payload)
     }
 }

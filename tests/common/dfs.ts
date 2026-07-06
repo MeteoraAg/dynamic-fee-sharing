@@ -1,9 +1,15 @@
-import { AccountMeta, Keypair, PublicKey } from "@solana/web3.js";
+import {
+  AccountMeta,
+  Keypair,
+  PublicKey,
+  SystemProgram,
+} from "@solana/web3.js";
 import BN from "bn.js";
 import CpAmmIDL from "../../idls/damm_v2.json";
 import DynamicBondingCurveIDL from "../../idls/dynamic_bonding_curve.json";
 import {
   createProgram,
+  deriveWhitelistedActionAddress,
   deriveDynamicFeeVaultPdaAddress,
   deriveFeeVaultAuthorityAddress,
   deriveFeeVaultPdaAddress,
@@ -917,5 +923,136 @@ export async function withdrawMigrationFee(
     remainingAccounts,
     payload,
     DBC_PROGRAM_ID
+  );
+}
+
+export async function createWhitelistedAction(
+  svm: LiteSVM,
+  admin: Keypair,
+  sourceProgram: PublicKey,
+  discriminator: number[],
+  token0VaultIndex: number,
+  token1VaultIndex: number
+): Promise<PublicKey> {
+  const program = createProgram();
+  const whitelistedAction = deriveWhitelistedActionAddress(sourceProgram, discriminator);
+  const tx = await program.methods
+    .createWhitelistedAction({
+      sourceProgram,
+      discriminator,
+      token0VaultIndex,
+      token1VaultIndex,
+      padding: [new BN(0), new BN(0), new BN(0), new BN(0)],
+    })
+    .accountsPartial({
+      whitelistedAction,
+      admin: admin.publicKey,
+      payer: admin.publicKey,
+      systemProgram: SystemProgram.programId,
+    })
+    .transaction();
+
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(admin);
+
+  sendTransactionOrExpectThrowError(svm, tx);
+
+  return whitelistedAction;
+}
+
+async function fundByWhitelistedAction(
+  svm: LiteSVM,
+  signer: Keypair,
+  feeVault: PublicKey,
+  token0Vault: PublicKey,
+  token1Vault: PublicKey | null,
+  whitelistedAction: PublicKey,
+  sourceProgram: PublicKey,
+  discriminator: number[],
+  payload: Buffer,
+  remainingAccounts: AccountMeta[]
+) {
+  const program = createProgram();
+
+  const tx = await program.methods
+    .fundByWhitelistedAction(discriminator, payload)
+    .accountsPartial({
+      dynamicFeeVault: feeVault,
+      token0Vault,
+      token1Vault,
+      sourceProgram,
+      whitelistedAction,
+      signer: signer.publicKey,
+    })
+    .remainingAccounts(remainingAccounts)
+    .transaction();
+
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.sign(signer);
+
+  return sendTransactionOrExpectThrowError(svm, tx);
+}
+
+// Claims a damm v2 position fee (token A + token B) into the dynamic vault via the whitelist path.
+// `tokenADestination`/`tokenBDestination` are the CPI fee destinations at remaining-account indices 3/4;
+// for a dual-token vault they are the two vault token accounts, for a single-token vault token A is
+// routed to an owner-controlled account and only token B lands in the vault.
+export async function fundByWhitelistedActionDammV2(
+  svm: LiteSVM,
+  signer: Keypair,
+  feeVault: PublicKey,
+  token0Vault: PublicKey,
+  token1Vault: PublicKey | null,
+  whitelistedAction: PublicKey,
+  dammv2Pool: PublicKey,
+  position: PublicKey,
+  positionNftAccount: PublicKey,
+  tokenADestination: PublicKey,
+  tokenBDestination: PublicKey
+) {
+  const dammV2PoolState = getDammV2PoolState(svm, dammv2Pool);
+
+  const remainingAccounts: AccountMeta[] = [
+    { isSigner: false, isWritable: false, pubkey: deriveDammV2PoolAuthority() },
+    { isSigner: false, isWritable: true, pubkey: dammv2Pool },
+    { isSigner: false, isWritable: true, pubkey: position },
+    { isSigner: false, isWritable: true, pubkey: tokenADestination },
+    { isSigner: false, isWritable: true, pubkey: tokenBDestination },
+    { isSigner: false, isWritable: true, pubkey: dammV2PoolState.tokenAVault },
+    { isSigner: false, isWritable: true, pubkey: dammV2PoolState.tokenBVault },
+    { isSigner: false, isWritable: true, pubkey: dammV2PoolState.tokenAMint },
+    { isSigner: false, isWritable: true, pubkey: dammV2PoolState.tokenBMint },
+    { isSigner: false, isWritable: false, pubkey: positionNftAccount },
+    { isSigner: false, isWritable: false, pubkey: feeVault },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: getProgramFromFlagDammV2(dammV2PoolState.tokenAFlag),
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: getProgramFromFlagDammV2(dammV2PoolState.tokenBFlag),
+    },
+    { isSigner: false, isWritable: false, pubkey: deriveDammV2EventAuthority() },
+    { isSigner: false, isWritable: false, pubkey: DAMM_V2_PROGRAM_ID },
+  ];
+
+  const discriminator = CpAmmIDL.instructions.find(
+    (instruction) => instruction.name === "claim_position_fee"
+  ).discriminator;
+  const payload = Buffer.from(discriminator);
+
+  return await fundByWhitelistedAction(
+    svm,
+    signer,
+    feeVault,
+    token0Vault,
+    token1Vault,
+    whitelistedAction,
+    DAMM_V2_PROGRAM_ID,
+    discriminator,
+    payload,
+    remainingAccounts
   );
 }

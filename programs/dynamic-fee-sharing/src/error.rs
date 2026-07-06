@@ -40,4 +40,10 @@ pub enum FeeVaultError {
 
     #[msg("Total share must be more than 0")]
     TotalShareIsZero,
+
+    #[msg("Invalid admin")]
+    InvalidAdmin,
+
+    #[msg("Invalid whitelisted action parameters")]
+    InvalidWhitelistedActionParameters,
 }

@@ -1,3 +1,5 @@
+pub mod auth;
+pub use auth::*;
 pub mod ix_initialize_fee_vault;
 pub use ix_initialize_fee_vault::*;
 pub mod ix_initialize_dynamic_fee_vault;
@@ -20,3 +22,9 @@ pub mod ix_remove_user;
 pub use ix_remove_user::*;
 pub mod ix_claim_unclaimed_fee;
 pub use ix_claim_unclaimed_fee::*;
+pub mod ix_create_whitelisted_action;
+pub use ix_create_whitelisted_action::*;
+pub mod ix_close_whitelisted_action;
+pub use ix_close_whitelisted_action::*;
+pub mod ix_fund_by_whitelisted_action;
+pub use ix_fund_by_whitelisted_action::*;

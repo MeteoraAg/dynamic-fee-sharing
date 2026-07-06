@@ -14,6 +14,8 @@ import {
 
 import DynamicFeeSharingIDL from "../../target/idl/dynamic_fee_sharing.json";
 import { DynamicFeeSharing } from "../../target/types/dynamic_fee_sharing";
+import { readFileSync } from "fs";
+import { join } from "path";
 import {
   createAssociatedTokenAccountInstruction,
   createCloseAccountInstruction,
@@ -43,7 +45,41 @@ export type FeeVault = IdlAccounts<DynamicFeeSharing>["feeVault"];
 
 export type DynamicFeeVault = IdlAccounts<DynamicFeeSharing>["dynamicFeeVault"];
 
+export type CreateWhitelistedActionParameters =
+  IdlTypes<DynamicFeeSharing>["createWhitelistedActionParameters"];
+
 export type DynamicFeeSharingProgram = Program<DynamicFeeSharing>;
+
+export function deriveWhitelistedActionAddress(
+  sourceProgram: PublicKey,
+  discriminator: number[] | Buffer
+): PublicKey {
+  const program = createProgram();
+  return PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("whitelisted_action"),
+      sourceProgram.toBuffer(),
+      Buffer.from(discriminator),
+    ],
+    program.programId
+  )[0];
+}
+
+// admin allowlisted under the `local` feature (see instructions/auth.rs); `pnpm test` builds with it
+export function loadLocalnetAdmin(svm: LiteSVM): Keypair {
+  const secret = JSON.parse(
+    readFileSync(
+      join(
+        __dirname,
+        "../../keys/localnet/admin-bossj3JvwiNK7pvjr149DqdtJxf2gdygbcmEPTkb2F1.json"
+      ),
+      "utf-8"
+    )
+  );
+  const admin = Keypair.fromSecretKey(Uint8Array.from(secret));
+  svm.airdrop(admin.publicKey, BigInt(LAMPORTS_PER_SOL));
+  return admin;
+}
 
 export const TOKEN_DECIMALS = 9;
 export const RAW_AMOUNT = 1_000_000_000 * 10 ** TOKEN_DECIMALS;
