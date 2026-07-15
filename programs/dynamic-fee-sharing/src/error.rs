@@ -34,4 +34,7 @@ pub enum FeeVaultError {
 
     #[msg("Invalid action")]
     InvalidAction,
+
+    #[msg("Invalid parameters")]
+    InvalidParameters,
 }

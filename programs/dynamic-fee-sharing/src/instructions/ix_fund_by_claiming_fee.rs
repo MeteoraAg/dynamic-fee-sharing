@@ -4,6 +4,7 @@ use crate::state::FeeVault;
 use crate::{error::FeeVaultError, math::SafeMath};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{instruction::Instruction, program::invoke_signed};
+use anchor_lang::Discriminator;
 use anchor_spl::token_interface::TokenAccount;
 
 #[event_cpi]
@@ -22,7 +23,7 @@ pub struct FundByClaimingFeeCtx<'info> {
     pub source_program: UncheckedAccount<'info>,
 }
 
-pub fn is_support_action<'info>(
+fn is_support_action<'info>(
     source_program: &Pubkey,
     discriminator: &[u8],
     token_vault: Pubkey,
@@ -38,11 +39,29 @@ pub fn is_support_action<'info>(
     false
 }
 
+fn validate_payload(source_program: &Pubkey, discriminator: &[u8], payload: &[u8]) -> Result<()> {
+    if source_program.eq(&damm_v2::ID)
+        && discriminator == damm_v2::client::args::ClaimReward::DISCRIMINATOR
+    {
+        let args = damm_v2::client::args::ClaimReward::try_from_slice(&payload[8..])
+            .map_err(|_| FeeVaultError::InvalidAction)?;
+
+        // when skip_reward == 1 and the token_account is frozen, damm_v2 clears the pending reward without transferring it
+        // so skipping the reward is not allowed when funding the FeeVault
+        require!(args.skip_reward == 0, FeeVaultError::InvalidParameters);
+    }
+
+    Ok(())
+}
+
 pub fn handle_fund_by_claiming_fee(
     ctx: Context<FundByClaimingFeeCtx>,
     payload: Vec<u8>,
 ) -> Result<()> {
+    require!(payload.len() >= 8, FeeVaultError::InvalidAction);
+
     let discriminator = &payload[..8]; // first 8 bytes is discriminator
+
     require!(
         is_support_action(
             ctx.accounts.source_program.key,
@@ -52,6 +71,8 @@ pub fn handle_fund_by_claiming_fee(
         ),
         FeeVaultError::InvalidAction
     );
+
+    validate_payload(ctx.accounts.source_program.key, &discriminator, &payload)?;
 
     let fee_vault = ctx.accounts.fee_vault.load()?;
 

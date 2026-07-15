@@ -76,7 +76,8 @@ async function fundByClaimingFee(
   tokenVault: PublicKey,
   remainingAccounts: AccountMeta[],
   payload: Buffer,
-  sourceProgram: PublicKey
+  sourceProgram: PublicKey,
+  errorCode?: number
 ) {
   const program = createProgram();
 
@@ -94,7 +95,7 @@ async function fundByClaimingFee(
   tx.recentBlockhash = svm.latestBlockhash();
   tx.sign(signer);
 
-  const result = sendTransactionOrExpectThrowError(svm, tx);
+  const result = sendTransactionOrExpectThrowError(svm, tx, false, errorCode);
 
   return result;
 }
@@ -222,7 +223,9 @@ export async function claimDammV2Reward(
   dammv2Pool: PublicKey,
   position: PublicKey,
   positionNftAccount: PublicKey,
-  rewardIndex: number
+  rewardIndex: number,
+  skipReward = false,
+  errorCode?: number
 ) {
   const dammV2PoolState = getDammV2PoolState(svm, dammv2Pool);
 
@@ -292,7 +295,7 @@ export async function claimDammV2Reward(
   const payload = Buffer.concat([
     Buffer.from(claimDammV2RewardDisc),
     Buffer.from([rewardIndex]),
-    Buffer.from([1]),
+    Buffer.from([Number(skipReward)]),
   ]);
   await fundByClaimingFee(
     svm,
@@ -301,7 +304,8 @@ export async function claimDammV2Reward(
     tokenVault,
     remainingAccounts,
     payload,
-    DAMM_V2_PROGRAM_ID
+    DAMM_V2_PROGRAM_ID,
+    errorCode
   );
 }
 
