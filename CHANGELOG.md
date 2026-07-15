@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Update anchor to `1.0.2`
+- The `fund_by_claiming_fee` endpoint now rejects when `skip_reward` is non-zero for DAMM v2 `claim_reward` instruction to prevent clearing pending rewards without funding the `FeeVault`
 
 ## dynamic-fee-sharing [0.1.1] [PR #8](https://github.com/MeteoraAg/dynamic-fee-sharing/pull/8)
 
