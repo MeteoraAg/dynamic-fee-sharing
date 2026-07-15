@@ -35,7 +35,8 @@ import { sendTransactionOrExpectThrowError } from "./svm";
 import { getOrCreateAtA, unwrapSOLInstruction, wrapSOLInstruction } from ".";
 
 export const DBC_PROGRAM_ID = new PublicKey(DynamicBondingCurveIDL.address);
-export type VirtualPool = IdlAccounts<DynamicBondingCurve>["virtualPool"];
+export type VirtualPool =
+  IdlAccounts<DynamicBondingCurve>["virtualPool"]["poolState"];
 export type PoolConfig = IdlAccounts<DynamicBondingCurve>["poolConfig"];
 
 export function createDBCProgram() {
@@ -208,7 +209,7 @@ export async function swap(svm: LiteSVM, params: SwapParams): Promise<void> {
   }
 
   const transaction = await program.methods
-    .swap({ amountIn, minimumAmountOut })
+    .swap2({ amount0: amountIn, amount1: minimumAmountOut, swapMode: 1 })
     .accountsPartial({
       poolAuthority,
       config,
@@ -291,7 +292,7 @@ export function getVirtualPoolState(
   return program.coder.accounts.decode(
     "virtualPool",
     Buffer.from(account.data)
-  );
+  ).poolState;
 }
 
 export function getVirtualConfigState(
@@ -437,10 +438,10 @@ export function buildDefaultCurve(): ConfigParameters {
     tokenType: 1, // token 2022
     tokenDecimal: tokenBaseDecimal,
     migrationQuoteThreshold: migrationQuoteThresholdWithDecimals,
-    partnerLpPercentage: 0,
-    creatorLpPercentage: 0,
-    partnerLockedLpPercentage: 100,
-    creatorLockedLpPercentage: 0,
+    partnerLiquidityPercentage: 0,
+    creatorLiquidityPercentage: 0,
+    partnerPermanentLockedLiquidityPercentage: 100,
+    creatorPermanentLockedLiquidityPercentage: 0,
     sqrtStartPrice,
     lockedVesting: {
       amountPerPeriod: new BN(0),
@@ -465,6 +466,30 @@ export function buildDefaultCurve(): ConfigParameters {
       dynamicFee: 0,
       poolFeeBps: 0,
     },
+    poolCreationFee: new BN(0),
+    partnerLiquidityVestingInfo: {
+      vestingPercentage: 0,
+      bpsPerPeriod: 0,
+      numberOfPeriods: 0,
+      cliffDurationFromMigrationTime: 0,
+      frequency: 0,
+    },
+    creatorLiquidityVestingInfo: {
+      vestingPercentage: 0,
+      bpsPerPeriod: 0,
+      numberOfPeriods: 0,
+      cliffDurationFromMigrationTime: 0,
+      frequency: 0,
+    },
+    migratedPoolBaseFeeMode: 0,
+    migratedPoolMarketCapFeeSchedulerParams: {
+      numberOfPeriod: 0,
+      sqrtPriceStepBps: 0,
+      schedulerExpirationDuration: 0,
+      reductionFactor: new BN(0),
+    },
+    enableFirstSwapWithMinFee: false,
+    compoundingFeeBps: 0,
     padding: [],
     curve,
   };
@@ -513,10 +538,10 @@ type ConfigParameters = {
   tokenType: number;
   tokenDecimal: number;
   migrationQuoteThreshold: BN;
-  partnerLpPercentage: number;
-  partnerLockedLpPercentage: number;
-  creatorLpPercentage: number;
-  creatorLockedLpPercentage: number;
+  partnerLiquidityPercentage: number;
+  partnerPermanentLockedLiquidityPercentage: number;
+  creatorLiquidityPercentage: number;
+  creatorPermanentLockedLiquidityPercentage: number;
   sqrtStartPrice: BN;
   lockedVesting: LockedVestingParams;
   migrationFeeOption: number;
@@ -532,8 +557,30 @@ type ConfigParameters = {
     collectFeeMode: number;
     dynamicFee: number;
   };
-  padding: BN[];
+  poolCreationFee: BN;
+  partnerLiquidityVestingInfo: LiquidityVestingInfoParams;
+  creatorLiquidityVestingInfo: LiquidityVestingInfoParams;
+  migratedPoolBaseFeeMode: number;
+  migratedPoolMarketCapFeeSchedulerParams: MigratedPoolMarketCapFeeSchedulerParams;
+  enableFirstSwapWithMinFee: boolean;
+  compoundingFeeBps: number;
+  padding: number[];
   curve: Array<LiquidityDistributionParameters>;
+};
+
+type LiquidityVestingInfoParams = {
+  vestingPercentage: number;
+  bpsPerPeriod: number;
+  numberOfPeriods: number;
+  cliffDurationFromMigrationTime: number;
+  frequency: number;
+};
+
+type MigratedPoolMarketCapFeeSchedulerParams = {
+  numberOfPeriod: number;
+  sqrtPriceStepBps: number;
+  schedulerExpirationDuration: number;
+  reductionFactor: BN;
 };
 
 type LiquidityDistributionParameters = {

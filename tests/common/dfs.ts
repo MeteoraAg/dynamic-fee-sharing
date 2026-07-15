@@ -525,6 +525,226 @@ export async function claimDbcPartnerTradingFee(
   );
 }
 
+export async function claimDbcCreatorTradingFee2(
+  svm: LiteSVM,
+  signer: Keypair,
+  feeVault: PublicKey,
+  tokenVault: PublicKey,
+  poolConfig: PublicKey,
+  virtualPool: PublicKey
+) {
+  const virtualPoolState = getVirtualPoolState(svm, virtualPool);
+  const poolConfigState = getVirtualConfigState(svm, poolConfig);
+
+  const tokenAAccount = getOrCreateAtA(
+    svm,
+    signer,
+    virtualPoolState.baseMint,
+    signer.publicKey,
+    TOKEN_2022_PROGRAM_ID
+  );
+
+  const remainingAccounts = [
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: deriveDbcPoolAuthority(),
+    },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: virtualPool,
+    },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: tokenAAccount,
+    },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: tokenVault,
+    },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: virtualPoolState.baseVault,
+    },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: virtualPoolState.quoteVault,
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: virtualPoolState.baseMint,
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: poolConfigState.quoteMint,
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: feeVault,
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: TOKEN_2022_PROGRAM_ID,
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: TOKEN_PROGRAM_ID,
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: deriveDbcEventAuthority(),
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: DBC_PROGRAM_ID,
+    },
+  ];
+  const claimDbcCreatorTradingFee2Disc =
+    DynamicBondingCurveIDL.instructions.find(
+      (instruction) => instruction.name === "claim_creator_trading_fee2"
+    ).discriminator;
+  const payload = Buffer.concat([
+    Buffer.from(claimDbcCreatorTradingFee2Disc),
+    U64_MAX.toBuffer(),
+    U64_MAX.toBuffer(),
+    Buffer.from([0, 0, 0, 0]),
+  ]);
+  await fundByClaimingFee(
+    svm,
+    signer,
+    feeVault,
+    tokenVault,
+    remainingAccounts,
+    payload,
+    DBC_PROGRAM_ID
+  );
+}
+
+export async function claimDbcPartnerTradingFee2(
+  svm: LiteSVM,
+  signer: Keypair,
+  feeClaimer: Keypair,
+  feeVault: PublicKey,
+  tokenVault: PublicKey,
+  poolConfig: PublicKey,
+  virtualPool: PublicKey
+) {
+  const virtualPoolState = getVirtualPoolState(svm, virtualPool);
+  const poolConfigState = getVirtualConfigState(svm, poolConfig);
+
+  const tokenAAccount = getOrCreateAtA(
+    svm,
+    feeClaimer,
+    virtualPoolState.baseMint,
+    feeClaimer.publicKey,
+    TOKEN_2022_PROGRAM_ID
+  );
+
+  const remainingAccounts = [
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: deriveDbcPoolAuthority(),
+    },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: poolConfig,
+    },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: virtualPool,
+    },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: tokenAAccount,
+    },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: tokenVault,
+    },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: virtualPoolState.baseVault,
+    },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: virtualPoolState.quoteVault,
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: virtualPoolState.baseMint,
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: poolConfigState.quoteMint,
+    },
+    {
+      isSigner: false,
+      isWritable: true,
+      pubkey: feeVault,
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: TOKEN_2022_PROGRAM_ID,
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: TOKEN_PROGRAM_ID,
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: deriveDbcEventAuthority(),
+    },
+    {
+      isSigner: false,
+      isWritable: false,
+      pubkey: DBC_PROGRAM_ID,
+    },
+  ];
+  const claimDbcPartnerTradingFee2Disc =
+    DynamicBondingCurveIDL.instructions.find(
+      (instruction) => instruction.name === "claim_trading_fee2"
+    ).discriminator;
+  const payload = Buffer.concat([
+    Buffer.from(claimDbcPartnerTradingFee2Disc),
+    U64_MAX.toBuffer(),
+    U64_MAX.toBuffer(),
+    Buffer.from([0, 0, 0, 0]),
+  ]);
+  await fundByClaimingFee(
+    svm,
+    signer,
+    feeVault,
+    tokenVault,
+    remainingAccounts,
+    payload,
+    DBC_PROGRAM_ID
+  );
+}
+
 export async function withdrawDbcCreatorSurplus(
   svm: LiteSVM,
   signer: Keypair,

@@ -12,7 +12,7 @@ pub mod seeds {
 
 // (program_id, instruction, index_of_token_vault_account)
 // TODO should find a way to avoid hardcoding index of token_vault_account
-pub static WHITELISTED_ACTIONS: [(Pubkey, &[u8], usize); 7] = [
+pub static WHITELISTED_ACTIONS: [(Pubkey, &[u8], usize); 9] = [
     // damm v2
     (
         damm_v2::ID,
@@ -37,12 +37,22 @@ pub static WHITELISTED_ACTIONS: [(Pubkey, &[u8], usize); 7] = [
     ),
     (
         dynamic_bonding_curve::ID,
+        dynamic_bonding_curve::client::args::ClaimCreatorTradingFee2::DISCRIMINATOR,
+        3,
+    ),
+    (
+        dynamic_bonding_curve::ID,
         dynamic_bonding_curve::client::args::PartnerWithdrawSurplus::DISCRIMINATOR,
         3,
     ),
     (
         dynamic_bonding_curve::ID,
         dynamic_bonding_curve::client::args::ClaimTradingFee::DISCRIMINATOR,
+        4,
+    ),
+    (
+        dynamic_bonding_curve::ID,
+        dynamic_bonding_curve::client::args::ClaimTradingFee2::DISCRIMINATOR,
         4,
     ),
     (
