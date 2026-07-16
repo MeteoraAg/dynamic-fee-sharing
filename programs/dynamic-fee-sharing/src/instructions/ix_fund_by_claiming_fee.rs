@@ -4,7 +4,6 @@ use crate::state::FeeVault;
 use crate::{error::FeeVaultError, math::SafeMath};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{instruction::Instruction, program::invoke_signed};
-use anchor_lang::Discriminator;
 use anchor_spl::token_interface::TokenAccount;
 
 #[event_cpi]
