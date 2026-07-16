@@ -147,6 +147,12 @@ export type SwapParams = {
   referralTokenAccount: PublicKey | null;
 };
 
+export enum DbcSwapMode {
+  ExactIn,
+  PartialFill,
+  ExactOut
+}
+
 export async function swap(svm: LiteSVM, params: SwapParams): Promise<void> {
   const {
     config,
@@ -207,9 +213,10 @@ export async function swap(svm: LiteSVM, params: SwapParams): Promise<void> {
 
     unrapSOLIx && postInstructions.push(unrapSOLIx);
   }
-
+  
+  // PartialFill since the test wanted to intentionally swap past the migration threshold. This previously accumulated some surplus
   const transaction = await program.methods
-    .swap2({ amount0: amountIn, amount1: minimumAmountOut, swapMode: 1 })
+    .swap2({ amount0: amountIn, amount1: minimumAmountOut, swapMode: DbcSwapMode.PartialFill })
     .accountsPartial({
       poolAuthority,
       config,
