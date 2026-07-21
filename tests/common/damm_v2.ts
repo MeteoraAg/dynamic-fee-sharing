@@ -35,6 +35,8 @@ export const MAX_SQRT_PRICE = new BN("79226673521066979257578248091");
 const LIQUIDITY_DELTA = new BN("1844674407800459963300003758876517305");
 const INIT_PRICE = new BN("18446744073709551616");
 
+const BASE_FEE_MODE_TIME_SCHEDULER_LINEAR = 0; // BaseFeeMode::FeeTimeSchedulerLinear
+
 export function createDammV2Program() {
   const wallet = new Wallet(Keypair.generate());
   const provider = new AnchorProvider(
@@ -57,6 +59,16 @@ export async function createDammV2Pool(
   positionNftAccount: PublicKey;
 }> {
   const program = createDammV2Program();
+
+  const baseFeeData = Array.from(
+    program.coder.types.encode("borshFeeTimeScheduler", {
+      cliffFeeNumerator: new BN(10_000_000),
+      numberOfPeriod: 0,
+      periodFrequency: new BN(0),
+      reductionFactor: new BN(0),
+      baseFeeMode: BASE_FEE_MODE_TIME_SCHEDULER_LINEAR,
+    })
+  );
 
   const poolAuthority = deriveDammV2PoolAuthority();
   const pool = deriveDammV2CustomizablePoolAddress(tokenAMint, tokenBMint);
@@ -87,13 +99,10 @@ export async function createDammV2Pool(
     .initializeCustomizablePool({
       poolFees: {
         baseFee: {
-          cliffFeeNumerator: new BN(10_000_000),
-          numberOfPeriod: 0,
-          reductionFactor: new BN(0),
-          periodFrequency: new BN(0),
-          feeSchedulerMode: 0,
+          data: baseFeeData,
         },
-        padding: new Array(3).fill(0),
+        compoundingFeeBps: 0,
+        padding: 0,
         dynamicFee: null,
       },
       sqrtMinPrice: MIN_SQRT_PRICE,

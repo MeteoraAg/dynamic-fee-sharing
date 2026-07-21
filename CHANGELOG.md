@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## dynamic-fee-sharing [0.1.2] [PR #15](https://github.com/MeteoraAg/dynamic-fee-sharing/pull/15)
 
+### Added
+
+- Whitelist DBC `claim_trading_fee2` and `claim_creator_trading_fee2` in `fund_by_claiming_fee`
+
 ### Changed
 
 - Update anchor to `1.0.2`
