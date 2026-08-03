@@ -21,9 +21,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes
 
+## dynamic-fee-sharing [0.1.2] [PR #15](https://github.com/MeteoraAg/dynamic-fee-sharing/pull/15)
+
+### Added
+
+- Whitelist DBC `claim_trading_fee2` and `claim_creator_trading_fee2` in `fund_by_claiming_fee`
+
+### Changed
+
+- Update anchor to `1.0.2`
+- The `fund_by_claiming_fee` endpoint now rejects when `skip_reward` is non-zero for DAMM v2 `claim_reward` instruction to prevent clearing pending rewards without funding the `FeeVault`
+
 ## dynamic-fee-sharing [0.1.1] [PR #8](https://github.com/MeteoraAg/dynamic-fee-sharing/pull/8)
 
 ### Added
+
 - Add new field `fee_vault_type` in `FeeVault` to distinguish between PDA-derived and keypair-derived fee vaults.
 - Add new endpoint `fund_by_claiming_fee`, that allow share holder in fee vault to claim fees from whitelisted endpoints of DAMM-v2 or Dynamic Bonding Curve
-

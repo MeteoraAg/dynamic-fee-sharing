@@ -3,11 +3,7 @@ import { Keypair, PublicKey } from "@solana/web3.js";
 import { expect } from "chai";
 import { LiteSVM } from "litesvm";
 import { generateUsers, getTokenBalance, startSvm } from "./common/svm";
-import {
-  createToken,
-  getFeeVault,
-  mintToken,
-} from "./common";
+import { createToken, getFeeVault, mintToken } from "./common";
 import {
   buildDefaultCurve,
   createConfig,
@@ -21,7 +17,9 @@ import {
 } from "./common/dbc";
 import {
   claimDbcCreatorTradingFee,
+  claimDbcCreatorTradingFee2,
   claimDbcPartnerTradingFee,
+  claimDbcPartnerTradingFee2,
   createFeeVaultPda,
   withdrawDbcCreatorSurplus,
   withdrawDbcPartnerSurplus,
@@ -44,7 +42,10 @@ describe("Funding by claiming in DBC", () => {
     payer = Keypair.generate();
     user = Keypair.generate();
     poolCreator = Keypair.generate();
-    [admin, payer, user, poolCreator, vaultOwner, shareHolder] = generateUsers(svm, 6);
+    [admin, payer, user, poolCreator, vaultOwner, shareHolder] = generateUsers(
+      svm,
+      6
+    );
     quoteMint = createToken(svm, admin, admin.publicKey, null);
   });
 
@@ -167,7 +168,127 @@ describe("Funding by claiming in DBC", () => {
     expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
   });
 
-  it("withdraw dbc creator surplus", async () => {
+  it("claim dbc creator trading fee via claim_creator_trading_fee2", async () => {
+    const { feeVault, tokenVault } = await createFeeVaultPda(
+      svm,
+      admin,
+      vaultOwner.publicKey,
+      quoteMint,
+      {
+        padding: [],
+        users: [
+          {
+            address: shareHolder.publicKey,
+            share: 100,
+          },
+          {
+            address: PublicKey.unique(),
+            share: 100,
+          },
+        ],
+      }
+    );
+
+    const { virtualPool, virtualPoolConfig } = await setupPool(
+      svm,
+      admin,
+      user,
+      poolCreator,
+      payer,
+      feeVault,
+      quoteMint
+    );
+
+    let vaultState = getFeeVault(svm, feeVault);
+
+    const preTotalFundedFee = vaultState.totalFundedFee;
+    const preFeePerShare = vaultState.feePerShare;
+
+    const preTokenVaultBalance = getTokenBalance(svm, tokenVault);
+
+    await claimDbcCreatorTradingFee2(
+      svm,
+      shareHolder,
+      feeVault,
+      tokenVault,
+      virtualPoolConfig,
+      virtualPool
+    );
+
+    const postTokenVaultBalance = getTokenBalance(svm, tokenVault);
+    vaultState = getFeeVault(svm, feeVault);
+
+    const postTotalFundedFee = vaultState.totalFundedFee;
+    const postFeePerShare = vaultState.feePerShare;
+
+    expect(postTotalFundedFee.sub(preTotalFundedFee).toString()).eq(
+      postTokenVaultBalance.sub(preTokenVaultBalance).toString()
+    );
+    expect(postFeePerShare.sub(preFeePerShare).gtn(0)).to.be.true;
+  });
+
+  it("claim dbc partner trading fee via claim_trading_fee2", async () => {
+    const { feeVault, tokenVault } = await createFeeVaultPda(
+      svm,
+      admin,
+      vaultOwner.publicKey,
+      quoteMint,
+      {
+        padding: [],
+        users: [
+          {
+            address: shareHolder.publicKey,
+            share: 100,
+          },
+          {
+            address: PublicKey.unique(),
+            share: 100,
+          },
+        ],
+      }
+    );
+
+    const { virtualPool, virtualPoolConfig } = await setupPool(
+      svm,
+      admin,
+      user,
+      poolCreator,
+      payer,
+      feeVault,
+      quoteMint
+    );
+
+    let vaultState = getFeeVault(svm, feeVault);
+
+    const preTotalFundedFee = vaultState.totalFundedFee;
+    const preFeePerShare = vaultState.feePerShare;
+
+    const preTokenVaultBalance = getTokenBalance(svm, tokenVault);
+
+    await claimDbcPartnerTradingFee2(
+      svm,
+      shareHolder,
+      payer,
+      feeVault,
+      tokenVault,
+      virtualPoolConfig,
+      virtualPool
+    );
+
+    const postTokenVaultBalance = getTokenBalance(svm, tokenVault);
+    vaultState = getFeeVault(svm, feeVault);
+
+    const postTotalFundedFee = vaultState.totalFundedFee;
+    const postFeePerShare = vaultState.feePerShare;
+
+    expect(postTotalFundedFee.sub(preTotalFundedFee).toString()).eq(
+      postTokenVaultBalance.sub(preTokenVaultBalance).toString()
+    );
+    expect(postFeePerShare.sub(preFeePerShare).gtn(0)).to.be.true;
+  });
+
+  it("withdraw dbc creator surplus succeeds but does not fund the FeeVault", async () => {
+    // Since DBC 0.1.7, swaps no longer creates surplus so quote_reserve is capped at migration_quote_threshold
     const { feeVault, tokenVault } = await createFeeVaultPda(
       svm,
       admin,
@@ -223,10 +344,11 @@ describe("Funding by claiming in DBC", () => {
     expect(postTotalFundedFee.sub(preTotalFundedFee).toString()).eq(
       postTokenVaultBalance.sub(preTokenVaultBalance).toString()
     );
-    expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
+    expect(postFeePerShare.sub(preFeePerShare).eqn(0)).to.be.true;
   });
 
-  it("withdraw dbc partner surplus", async () => {
+  it("withdraw dbc partner surplus succeeds but does not fund the FeeVault", async () => {
+    // Since DBC 0.1.7, swaps no longer creates surplus so quote_reserve is capped at migration_quote_threshold
     const { feeVault, tokenVault } = await createFeeVaultPda(
       svm,
       admin,
@@ -282,7 +404,7 @@ describe("Funding by claiming in DBC", () => {
     expect(postTotalFundedFee.sub(preTotalFundedFee).toString()).eq(
       postTokenVaultBalance.sub(preTokenVaultBalance).toString()
     );
-    expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
+    expect(postFeePerShare.sub(preFeePerShare).eqn(0)).to.be.true;
   });
 
   it("withdraw migration fee", async () => {
@@ -387,7 +509,7 @@ async function setupPool(
   });
 
   // transfer pool creator
-    await transferCreator(svm, virtualPool, poolCreator, feeVault);
+  await transferCreator(svm, virtualPool, poolCreator, feeVault);
 
   let virtualPoolState = getVirtualPoolState(svm, virtualPool);
   let configState = getVirtualConfigState(svm, virtualPoolConfig);

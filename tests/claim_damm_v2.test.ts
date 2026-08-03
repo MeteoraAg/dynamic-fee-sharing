@@ -10,10 +10,19 @@ import {
 import {
   createToken,
   getFeeVault,
+  getProgramErrorCodeHexString,
   mintToken,
 } from "./common";
-import { createDammV2Pool, dammV2Swap, initializeAndFundReward } from "./common/damm_v2";
-import { claimDammV2Fee, claimDammV2Reward, createFeeVaultPda } from "./common/dfs";
+import {
+  createDammV2Pool,
+  dammV2Swap,
+  initializeAndFundReward,
+} from "./common/damm_v2";
+import {
+  claimDammV2Fee,
+  claimDammV2Reward,
+  createFeeVaultPda,
+} from "./common/dfs";
 import { BN } from "bn.js";
 import { expect } from "chai";
 import {
@@ -133,7 +142,6 @@ describe("Fund by claiming damm v2", () => {
     expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
   });
 
-
   it("Fund by claiming damm v2 reward", async () => {
     const { feeVault, tokenVault } = await createFeeVaultPda(
       svm,
@@ -177,10 +185,16 @@ describe("Fund by claiming damm v2", () => {
     const preTokenVaultBalance = getTokenBalance(svm, tokenVault);
 
     const rewardIndex = 0;
-    await initializeAndFundReward(svm, creator, dammV2Pool, rewardMint, rewardIndex);
+    await initializeAndFundReward(
+      svm,
+      creator,
+      dammV2Pool,
+      rewardMint,
+      rewardIndex
+    );
 
     warpToTimestamp(svm, new BN(12 * 60 * 60));
-    
+
     await claimDammV2Reward(
       svm,
       shareHolder,
@@ -203,5 +217,67 @@ describe("Fund by claiming damm v2", () => {
       postTokenVaultBalance.sub(preTokenVaultBalance).toString()
     );
     expect(Number(postFeePerShare.sub(preFeePerShare))).gt(0);
+  });
+
+  it("Reject claiming damm v2 reward with skip_reward set", async () => {
+    const { feeVault, tokenVault } = await createFeeVaultPda(
+      svm,
+      admin,
+      vaultOwner.publicKey,
+      rewardMint,
+      {
+        padding: [],
+        users: [
+          {
+            address: shareHolder.publicKey,
+            share: 100,
+          },
+          {
+            address: PublicKey.unique(),
+            share: 100,
+          },
+        ],
+      }
+    );
+
+    const setAuthorityIx = createSetAuthorityInstruction(
+      positionNftAccount,
+      creator.publicKey,
+      AuthorityType.AccountOwner,
+      feeVault,
+      [],
+      TOKEN_2022_PROGRAM_ID
+    );
+    const assignOwnerTx = new Transaction().add(setAuthorityIx);
+    assignOwnerTx.recentBlockhash = svm.latestBlockhash();
+    assignOwnerTx.sign(creator);
+
+    sendTransactionOrExpectThrowError(svm, assignOwnerTx);
+
+    const rewardIndex = 0;
+    await initializeAndFundReward(
+      svm,
+      creator,
+      dammV2Pool,
+      rewardMint,
+      rewardIndex
+    );
+
+    warpToTimestamp(svm, new BN(12 * 60 * 60));
+
+    const errorCode = getProgramErrorCodeHexString("InvalidParameters");
+    await claimDammV2Reward(
+      svm,
+      shareHolder,
+      creator,
+      feeVault,
+      tokenVault,
+      dammV2Pool,
+      position,
+      positionNftAccount,
+      rewardIndex,
+      true,
+      errorCode
+    );
   });
 });

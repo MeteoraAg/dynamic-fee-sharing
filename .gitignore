@@ -6,4 +6,9 @@ node_modules
 test-ledger
 .yarn
 pnpm-lock.yaml
+package-lock.json
+yarn.lock
 proptest-regressions
+
+.notes
+CLAUDE.md
