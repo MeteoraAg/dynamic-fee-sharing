@@ -15,7 +15,7 @@ import {
   PublicKey,
   Transaction,
 } from "@solana/web3.js";
-import { LiteSVM } from "litesvm";
+import { LiteSVM } from "./litesvmCompat";
 import {
   getAssociatedTokenAddressSync,
   TOKEN_2022_PROGRAM_ID,

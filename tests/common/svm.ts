@@ -6,12 +6,8 @@ import {
   Transaction,
 } from "@solana/web3.js";
 
-import {
-  AccountInfoBytes,
-  FailedTransactionMetadata,
-  LiteSVM,
-  TransactionMetadata,
-} from "litesvm";
+import { FailedTransactionMetadata, TransactionMetadata } from "litesvm";
+import { AccountInfoBytes, LiteSVM } from "./litesvmCompat";
 import { DYNAMIC_FEE_SHARING_PROGRAM_ID } from "./index";
 import { expect } from "chai";
 import BN from "bn.js";

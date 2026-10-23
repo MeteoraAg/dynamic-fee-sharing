@@ -1,7 +1,7 @@
 import { BN } from "bn.js";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import { expect } from "chai";
-import { LiteSVM } from "litesvm";
+import { LiteSVM } from "./common/litesvmCompat";
 import { generateUsers, getTokenBalance, startSvm } from "./common/svm";
 import { createToken, getFeeVault, mintToken } from "./common";
 import {
@@ -56,7 +56,7 @@ describe("Funding by claiming in DBC", () => {
       vaultOwner.publicKey,
       quoteMint,
       {
-        padding: [],
+        padding: new Array(8).fill(new BN(0)), // [u64; 8]
         users: [
           {
             address: shareHolder.publicKey,
@@ -115,7 +115,7 @@ describe("Funding by claiming in DBC", () => {
       vaultOwner.publicKey,
       quoteMint,
       {
-        padding: [],
+        padding: new Array(8).fill(new BN(0)), // [u64; 8]
         users: [
           {
             address: shareHolder.publicKey,
@@ -175,7 +175,7 @@ describe("Funding by claiming in DBC", () => {
       vaultOwner.publicKey,
       quoteMint,
       {
-        padding: [],
+        padding: new Array(8).fill(new BN(0)), // [u64; 8]
         users: [
           {
             address: shareHolder.publicKey,
@@ -234,7 +234,7 @@ describe("Funding by claiming in DBC", () => {
       vaultOwner.publicKey,
       quoteMint,
       {
-        padding: [],
+        padding: new Array(8).fill(new BN(0)), // [u64; 8]
         users: [
           {
             address: shareHolder.publicKey,
@@ -295,7 +295,7 @@ describe("Funding by claiming in DBC", () => {
       vaultOwner.publicKey,
       quoteMint,
       {
-        padding: [],
+        padding: new Array(8).fill(new BN(0)), // [u64; 8]
         users: [
           {
             address: shareHolder.publicKey,
@@ -355,7 +355,7 @@ describe("Funding by claiming in DBC", () => {
       vaultOwner.publicKey,
       quoteMint,
       {
-        padding: [],
+        padding: new Array(8).fill(new BN(0)), // [u64; 8]
         users: [
           {
             address: shareHolder.publicKey,
@@ -414,7 +414,7 @@ describe("Funding by claiming in DBC", () => {
       vaultOwner.publicKey,
       quoteMint,
       {
-        padding: [],
+        padding: new Array(8).fill(new BN(0)), // [u64; 8]
         users: [
           {
             address: shareHolder.publicKey,

@@ -120,6 +120,31 @@ impl FeeVault {
         Ok(fee_being_claimed)
     }
 
+    /// Moves the user at `index` to `new_address`, signed by its current address. The share and the fee accounting
+    /// stay with the slot, so the fee not claimed yet goes to the new address.
+    /// It does not help once the current key is compromised: whoever holds that key can update the address too.
+    pub fn update_user_address(
+        &mut self,
+        index: u8,
+        signer: &Pubkey,
+        new_address: &Pubkey,
+    ) -> Result<Pubkey> {
+        let user = self
+            .users
+            .get_mut(index as usize)
+            .ok_or_else(|| FeeVaultError::InvalidUserIndex)?;
+        require!(user.address.eq(signer), FeeVaultError::InvalidUserAddress);
+        require!(
+            new_address.ne(&Pubkey::default()) && new_address.ne(&user.address),
+            FeeVaultError::InvalidUserAddress
+        );
+
+        let old_address = user.address;
+        user.address = *new_address;
+
+        Ok(old_address)
+    }
+
     pub fn is_share_holder(&self, signer: &Pubkey) -> bool {
         self.users
             .iter()

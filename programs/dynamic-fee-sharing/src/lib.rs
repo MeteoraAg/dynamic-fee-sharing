@@ -14,7 +14,7 @@ pub mod utils;
 pub mod tests;
 declare_id!("dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh");
 
-#[program]
+#[program(legacy_idl)]
 pub mod dynamic_fee_sharing {
     use super::*;
     pub fn initialize_fee_vault(
@@ -44,5 +44,13 @@ pub mod dynamic_fee_sharing {
 
     pub fn claim_fee(ctx: Context<ClaimFeeCtx>, index: u8) -> Result<()> {
         instructions::handle_claim_fee(ctx, index)
+    }
+
+    pub fn update_user_address(
+        ctx: Context<UpdateUserAddressCtx>,
+        index: u8,
+        new_address: Pubkey,
+    ) -> Result<()> {
+        instructions::handle_update_user_address(ctx, index, new_address)
     }
 }

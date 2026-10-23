@@ -10,7 +10,7 @@ import {
   InitializeFeeVaultParameters,
   U64_MAX,
 } from ".";
-import { LiteSVM } from "litesvm";
+import { LiteSVM } from "./litesvmCompat";
 import {
   getAssociatedTokenAddressSync,
   TOKEN_2022_PROGRAM_ID,

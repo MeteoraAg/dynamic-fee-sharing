@@ -1,4 +1,4 @@
-import { LiteSVM } from "litesvm";
+import { LiteSVM } from "./common/litesvmCompat";
 import { PublicKey, Keypair, Transaction } from "@solana/web3.js";
 import {
   generateUsers,
@@ -74,7 +74,7 @@ describe("Fund by claiming damm v2", () => {
       vaultOwner.publicKey,
       tokenBMint,
       {
-        padding: [],
+        padding: new Array(8).fill(new BN(0)), // [u64; 8]
         users: [
           {
             address: shareHolder.publicKey,
@@ -149,7 +149,7 @@ describe("Fund by claiming damm v2", () => {
       vaultOwner.publicKey,
       rewardMint,
       {
-        padding: [],
+        padding: new Array(8).fill(new BN(0)), // [u64; 8]
         users: [
           {
             address: shareHolder.publicKey,
@@ -226,7 +226,7 @@ describe("Fund by claiming damm v2", () => {
       vaultOwner.publicKey,
       rewardMint,
       {
-        padding: [],
+        padding: new Array(8).fill(new BN(0)), // [u64; 8]
         users: [
           {
             address: shareHolder.publicKey,

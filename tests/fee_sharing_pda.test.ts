@@ -1,4 +1,5 @@
-import { LiteSVM, TransactionMetadata } from "litesvm";
+import { TransactionMetadata } from "litesvm";
+import { LiteSVM } from "./common/litesvmCompat";
 import { PublicKey, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import {
   createProgram,
@@ -67,7 +68,7 @@ describe("Fee vault pda sharing", () => {
     });
 
     const params: InitializeFeeVaultParameters = {
-      padding: [],
+      padding: new Array(8).fill(new BN(0)), // [u64; 8]
       users,
     };
 
@@ -101,7 +102,7 @@ describe("Fee vault pda sharing", () => {
     const users = [];
 
     const params: InitializeFeeVaultParameters = {
-      padding: [],
+      padding: new Array(8).fill(new BN(0)), // [u64; 8]
       users,
     };
     const baseKp = Keypair.generate();
@@ -140,7 +141,7 @@ describe("Fee vault pda sharing", () => {
     });
 
     const params: InitializeFeeVaultParameters = {
-      padding: [],
+      padding: new Array(8).fill(new BN(0)), // [u64; 8]
       users,
     };
 

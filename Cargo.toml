@@ -14,8 +14,16 @@ incremental = false
 codegen-units = 1
 
 [workspace.dependencies]
-anchor-lang = {version = "1.0.2", features = ["event-cpi"]}
-anchor-spl = "1.0.2"
+anchor-lang = { version = "1.2.1", default-features = false, features = [
+    "solana-v4",
+    "event-cpi",
+] }
+anchor-spl = { version = "1.2.1", default-features = false, features = [
+    "solana-v4",
+    "token",
+    "token_2022",
+    "token_2022_extensions",
+] }
 bytemuck = { version = "1.21", features = ["derive", "min_const_generics"] }
 
 [workspace.lints.rust]
@@ -24,4 +32,4 @@ unexpected_cfgs = { level = "warn", check-cfg = [
 ] }
 
 [workspace.metadata.cli]
-solana = "3.1.10"
+solana = "4.1.2"
