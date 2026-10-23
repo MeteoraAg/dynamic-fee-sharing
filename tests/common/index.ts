@@ -6,11 +6,8 @@ import {
   Program,
   Wallet,
 } from "@anchor-lang/core";
-import {
-  FailedTransactionMetadata,
-  LiteSVM,
-  TransactionMetadata,
-} from "litesvm";
+import { FailedTransactionMetadata, TransactionMetadata } from "litesvm";
+import { LiteSVM } from "./litesvmCompat";
 
 import DynamicFeeSharingIDL from "../../target/idl/dynamic_fee_sharing.json";
 import { DynamicFeeSharing } from "../../target/types/dynamic_fee_sharing";

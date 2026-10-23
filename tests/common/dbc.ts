@@ -17,7 +17,7 @@ import {
   SYSVAR_INSTRUCTIONS_PUBKEY,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { LiteSVM } from "litesvm";
+import { LiteSVM } from "./litesvmCompat";
 import {
   getAssociatedTokenAddressSync,
   NATIVE_MINT,
@@ -497,7 +497,7 @@ export function buildDefaultCurve(): ConfigParameters {
     },
     enableFirstSwapWithMinFee: false,
     compoundingFeeBps: 0,
-    padding: [],
+    padding: [0, 0], // [u8; 2]
     curve,
   };
   return instructionParams;

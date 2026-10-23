@@ -21,6 +21,14 @@ pub struct EvtFundFee {
 }
 
 #[event]
+pub struct EvtUpdateUserAddress {
+    pub fee_vault: Pubkey,
+    pub index: u8,
+    pub old_address: Pubkey,
+    pub new_address: Pubkey,
+}
+
+#[event]
 pub struct EvtClaimFee {
     pub fee_vault: Pubkey,
     pub user: Pubkey,
