@@ -14,7 +14,7 @@ pub mod utils;
 pub mod tests;
 declare_id!("dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh");
 
-#[program]
+#[program(legacy_idl)]
 pub mod dynamic_fee_sharing {
     use super::*;
     pub fn initialize_fee_vault(

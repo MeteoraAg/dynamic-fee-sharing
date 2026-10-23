@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Update to anchor 1.2.1 and solana 4.1.2, building for SBPF v3 with platform-tools v1.57
+- Enable `#[program(legacy_idl)]` to keep the legacy on-chain IDL instructions, managed with `anchor legacy-idl` (`anchor idl` now uses the Program Metadata program). Anchor marks it as deprecated
 
 ## dynamic-fee-sharing [0.1.2] [PR #15](https://github.com/MeteoraAg/dynamic-fee-sharing/pull/15)
 
