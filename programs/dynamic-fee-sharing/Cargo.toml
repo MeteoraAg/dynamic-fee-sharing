@@ -3,6 +3,7 @@ name = "dynamic-fee-sharing"
 version = "0.1.2"
 description = "Created with Anchor"
 edition = "2021"
+publish = false
 
 [lib]
 crate-type = ["cdylib", "lib"]
