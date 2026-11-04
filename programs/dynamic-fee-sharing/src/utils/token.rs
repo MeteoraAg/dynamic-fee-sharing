@@ -67,10 +67,10 @@ pub fn calculate_transfer_fee_excluded_amount<'info>(
     if let Some(epoch_transfer_fee) = get_epoch_transfer_fee(token_mint)? {
         let transfer_fee = epoch_transfer_fee
             .calculate_fee(transfer_fee_included_amount)
-            .ok_or_else(|| FeeVaultError::MathOverflow)?;
+            .ok_or(FeeVaultError::MathOverflow)?;
         let transfer_fee_excluded_amount = transfer_fee_included_amount
             .checked_sub(transfer_fee)
-            .ok_or_else(|| FeeVaultError::MathOverflow)?;
+            .ok_or(FeeVaultError::MathOverflow)?;
         return Ok(TransferFeeExcludedAmount {
             amount: transfer_fee_excluded_amount,
             transfer_fee,
@@ -98,7 +98,7 @@ pub fn get_epoch_transfer_fee<'info>(
         token_mint_unpacked.get_extension::<extension::transfer_fee::TransferFeeConfig>()
     {
         let epoch = Clock::get()?.epoch;
-        return Ok(Some(transfer_fee_config.get_epoch_fee(epoch).clone()));
+        return Ok(Some(*transfer_fee_config.get_epoch_fee(epoch)));
     }
 
     Ok(None)

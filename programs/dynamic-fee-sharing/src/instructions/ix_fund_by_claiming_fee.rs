@@ -73,7 +73,7 @@ pub fn handle_fund_by_claiming_fee(
         FeeVaultError::InvalidAction
     );
 
-    validate_payload(ctx.accounts.source_program.key, &discriminator, &payload)?;
+    validate_payload(ctx.accounts.source_program.key, discriminator, &payload)?;
 
     let fee_vault = ctx.accounts.fee_vault.load()?;
 
@@ -97,7 +97,7 @@ pub fn handle_fund_by_claiming_fee(
             let is_signer = acc.key == &ctx.accounts.fee_vault.key();
             AccountMeta {
                 pubkey: *acc.key,
-                is_signer: is_signer,
+                is_signer,
                 is_writable: acc.is_writable,
             }
         })

@@ -57,6 +57,7 @@ pub struct UserFee {
 const_assert_eq!(UserFee::INIT_SPACE, 80);
 
 impl FeeVault {
+    #[allow(clippy::too_many_arguments)]
     pub fn initialize(
         &mut self,
         owner: &Pubkey,
@@ -73,13 +74,13 @@ impl FeeVault {
         self.token_mint = *token_mint;
         self.token_vault = *token_vault;
         let mut total_share = 0;
-        for i in 0..users.len() {
+        for (i, user) in users.iter().enumerate() {
             self.users[i] = UserFee {
-                address: users[i].address,
-                share: users[i].share,
+                address: user.address,
+                share: user.share,
                 ..Default::default()
             };
-            total_share = total_share.safe_add(users[i].share)?;
+            total_share = total_share.safe_add(user.share)?;
         }
         self.total_share = total_share;
         self.base = *base;
@@ -93,7 +94,7 @@ impl FeeVault {
         self.total_funded_fee = self.total_funded_fee.safe_add(amount)?;
 
         let fee_per_share = shl_div(amount, self.total_share.into(), PRECISION_SCALE)
-            .ok_or_else(|| FeeVaultError::MathOverflow)?;
+            .ok_or(FeeVaultError::MathOverflow)?;
 
         self.fee_per_share = self.fee_per_share.safe_add(fee_per_share)?;
 
@@ -104,13 +105,13 @@ impl FeeVault {
         let user = self
             .users
             .get_mut(index as usize)
-            .ok_or_else(|| FeeVaultError::InvalidUserIndex)?;
+            .ok_or(FeeVaultError::InvalidUserIndex)?;
         require!(user.address.eq(signer), FeeVaultError::InvalidUserAddress);
 
         let reward_per_share_delta = self.fee_per_share.safe_sub(user.fee_per_share_checkpoint)?;
 
         let fee_being_claimed = mul_shr(user.share.into(), reward_per_share_delta, PRECISION_SCALE)
-            .ok_or_else(|| FeeVaultError::MathOverflow)?
+            .ok_or(FeeVaultError::MathOverflow)?
             .try_into()
             .map_err(|_| FeeVaultError::MathOverflow)?;
 
