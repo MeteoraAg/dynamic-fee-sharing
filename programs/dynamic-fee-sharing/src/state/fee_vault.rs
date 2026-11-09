@@ -94,7 +94,7 @@ impl FeeVault {
         self.total_funded_fee = self.total_funded_fee.safe_add(amount)?;
 
         let fee_per_share = shl_div(amount, self.total_share.into(), PRECISION_SCALE)
-            .ok_or(FeeVaultError::MathOverflow)?;
+            .ok_or_else(|| FeeVaultError::MathOverflow)?;
 
         self.fee_per_share = self.fee_per_share.safe_add(fee_per_share)?;
 
@@ -105,13 +105,13 @@ impl FeeVault {
         let user = self
             .users
             .get_mut(index as usize)
-            .ok_or(FeeVaultError::InvalidUserIndex)?;
+            .ok_or_else(|| FeeVaultError::InvalidUserIndex)?;
         require!(user.address.eq(signer), FeeVaultError::InvalidUserAddress);
 
         let reward_per_share_delta = self.fee_per_share.safe_sub(user.fee_per_share_checkpoint)?;
 
         let fee_being_claimed = mul_shr(user.share.into(), reward_per_share_delta, PRECISION_SCALE)
-            .ok_or(FeeVaultError::MathOverflow)?
+            .ok_or_else(|| FeeVaultError::MathOverflow)?
             .try_into()
             .map_err(|_| FeeVaultError::MathOverflow)?;
 
