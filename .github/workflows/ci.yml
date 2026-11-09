@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 0
       - name: Get specific changed files
         id: changed-files-specific
-        uses: tj-actions/changed-files@v18.6
+        uses: tj-actions/changed-files@a2f1692a6f703b7a14e155ae404e6bb15538b763 # v18.6
         with:
           files: |
             programs/dynamic-fee-sharing
@@ -40,7 +40,7 @@ jobs:
           toolchain: ${{ env.TOOLCHAIN }}
           components: clippy
       # Cache rust, cargo
-      - uses: &rust_cache Swatinem/rust-cache@v1
+      - uses: &rust_cache Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b # v1
       - run: cargo test --package dynamic-fee-sharing
         shell: bash
 
