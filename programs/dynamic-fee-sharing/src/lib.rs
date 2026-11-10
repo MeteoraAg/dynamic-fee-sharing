@@ -1,3 +1,6 @@
+// `#[program]` type checks the instruction arguments with `let _: T = panic!();` in the handlers
+// it generates next to the program module
+#![allow(clippy::diverging_sub_expression)]
 use anchor_lang::prelude::*;
 #[macro_use]
 pub mod macros;

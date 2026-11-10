@@ -57,6 +57,7 @@ pub struct UserFee {
 const_assert_eq!(UserFee::INIT_SPACE, 80);
 
 impl FeeVault {
+    #[allow(clippy::too_many_arguments)]
     pub fn initialize(
         &mut self,
         owner: &Pubkey,
@@ -73,13 +74,13 @@ impl FeeVault {
         self.token_mint = *token_mint;
         self.token_vault = *token_vault;
         let mut total_share = 0;
-        for i in 0..users.len() {
+        for (i, user) in users.iter().enumerate() {
             self.users[i] = UserFee {
-                address: users[i].address,
-                share: users[i].share,
+                address: user.address,
+                share: user.share,
                 ..Default::default()
             };
-            total_share = total_share.safe_add(users[i].share)?;
+            total_share = total_share.safe_add(user.share)?;
         }
         self.total_share = total_share;
         self.base = *base;

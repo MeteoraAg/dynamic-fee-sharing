@@ -26,7 +26,7 @@ impl InitializeFeeVaultParameters {
     pub fn validate(&self) -> Result<()> {
         let number_of_user = self.users.len();
         require!(
-            number_of_user >= 2 && number_of_user <= MAX_USER,
+            (2..=MAX_USER).contains(&number_of_user),
             FeeVaultError::ExceededUser
         );
         for i in 0..number_of_user {
@@ -58,7 +58,7 @@ pub struct InitializeFeeVaultCtx<'info> {
     /// CHECK: pool authority
     #[account(
             seeds = [
-                FEE_VAULT_AUTHORITY_PREFIX.as_ref(),
+                FEE_VAULT_AUTHORITY_PREFIX,
             ],
             bump,
         )]
@@ -67,7 +67,7 @@ pub struct InitializeFeeVaultCtx<'info> {
     #[account(
         init,
         seeds = [
-            TOKEN_VAULT_PREFIX.as_ref(),
+            TOKEN_VAULT_PREFIX,
             fee_vault.key().as_ref(),
         ],
         token::mint = token_mint,
@@ -121,8 +121,9 @@ pub fn handle_initialize_fee_vault(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn create_fee_vault<'info>(
-    token_mint: &Box<InterfaceAccount<'info, Mint>>,
+    token_mint: &InterfaceAccount<'info, Mint>,
     params: &InitializeFeeVaultParameters,
     fee_vault: &AccountLoader<'info, FeeVault>,
     owner: &Pubkey,
@@ -131,14 +132,14 @@ pub fn create_fee_vault<'info>(
     fee_vault_bump: u8,
     fee_vault_type: u8,
 ) -> Result<()> {
-    require!(is_supported_mint(&token_mint)?, FeeVaultError::InvalidMint);
+    require!(is_supported_mint(token_mint)?, FeeVaultError::InvalidMint);
 
     params.validate()?;
 
     let mut fee_vault = fee_vault.load_init()?;
     fee_vault.initialize(
         owner,
-        get_token_program_flags(&token_mint).into(),
+        get_token_program_flags(token_mint).into(),
         &token_mint.key(),
         token_vault,
         base,

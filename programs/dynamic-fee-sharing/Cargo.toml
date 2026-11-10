@@ -3,6 +3,7 @@ name = "dynamic-fee-sharing"
 version = "0.1.2"
 description = "Created with Anchor"
 edition = "2021"
+publish = false
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -36,3 +37,8 @@ proptest = "1.6"
 
 [lints]
 workspace = true
+
+# `#[account(zero_copy)]` expands to `bytemuck::Pod`/`Zeroable` impls.
+# cargo-machete can't see that generated code.
+[package.metadata.cargo-machete]
+ignored = ["bytemuck"]
