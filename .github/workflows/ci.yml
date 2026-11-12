@@ -6,6 +6,9 @@ on:
       - main
       - release_*
 
+permissions:
+  contents: read
+
 env:
   SOLANA_CLI_VERSION: 3.1.10
   ANCHOR_CLI_VERSION: 1.0.2
@@ -24,10 +27,21 @@ jobs:
           fetch-depth: 0
       - name: Get specific changed files
         id: changed-files-specific
-        uses: tj-actions/changed-files@a2f1692a6f703b7a14e155ae404e6bb15538b763 # v18.6
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
           files: |
-            programs/dynamic-fee-sharing
+            programs/dynamic-fee-sharing/**
+            libs/**
+            idls/**
+            Cargo.toml
+            Cargo.lock
+            rust-toolchain.toml
+            Anchor.toml
+            package.json
+            bun.lock
+            tsconfig.json
+            tests/**
+            .github/**
 
   cargo_test:
     runs-on: *runner
@@ -40,7 +54,7 @@ jobs:
           toolchain: ${{ env.TOOLCHAIN }}
           components: clippy
       # Cache rust, cargo
-      - uses: &rust_cache Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b # v1
+      - uses: &rust_cache Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - run: cargo test --package dynamic-fee-sharing
         shell: bash
 
@@ -55,7 +69,7 @@ jobs:
           toolchain: ${{ env.TOOLCHAIN }}
           components: clippy
       # Cache rust, cargo
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: *rust_cache
       - run: cargo clippy --locked --all-targets -- -D warnings
         shell: bash
 
